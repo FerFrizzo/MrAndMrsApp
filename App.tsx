@@ -1,20 +1,22 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { useState, useCallback } from 'react';
+import { View, Text } from 'react-native';
+import { SplashScreen } from './components/SplashScreen';
 
 export default function App() {
+  const [isAppReady, setIsAppReady] = useState(false);
+
+  const handleSplashComplete = useCallback(() => {
+    setIsAppReady(true);
+  }, []);
+
+  if (!isAppReady) {
+    return <SplashScreen onAnimationComplete={handleSplashComplete} />;
+  }
+
   return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
+    <View style={{ flex: 1 }}>
+      <Text>Bla</Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
