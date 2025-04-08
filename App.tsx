@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react';
-import { View, Text } from 'react-native';
-import { SplashScreen } from './components/SplashScreen';
+import { View } from 'react-native';
+import { SplashScreen } from './src/components/SplashScreen';
+import { AuthProvider } from './src/context/AuthContext';
+import AppNavigator from './src/navigation/AppNavigator';
 
 export default function App() {
   const [isAppReady, setIsAppReady] = useState(false);
@@ -14,9 +16,9 @@ export default function App() {
   }
 
   return (
-    <View style={{ flex: 1 }}>
-      <Text>Bla</Text>
-    </View>
+    <AuthProvider>
+      <AppNavigator />
+    </AuthProvider>
   );
 }
 

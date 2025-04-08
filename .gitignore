@@ -65,3 +65,10 @@ yarn-error.log
 .env.development
 .env.test
 .env.production
+
+#Google files
+google-services.json
+GoogleService-info.plist
+
+# Supabase Edge Functions
+supabase/functions/*/.env
