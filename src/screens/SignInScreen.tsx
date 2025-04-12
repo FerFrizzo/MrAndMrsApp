@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   TouchableWithoutFeedback,
@@ -21,6 +20,7 @@ import { Purple, PurpleLight } from '../utils/Colors';
 import { AntDesign } from '@expo/vector-icons';
 import { signInWithEmail } from '../services/authService';
 import SignInWithGoogle from '../components/SignInWithGoogle';
+import { useToast } from '../contexts/ToastContext';
 
 type SignInScreenProps = NativeStackScreenProps<RootStackParamList, 'SignIn'>;
 
@@ -29,10 +29,11 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
   const [password, setPassword] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const { setUser } = useAuth();
+  const { showToast } = useToast();
 
   const handleSignIn = async () => {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert('Error', 'Please enter both email and password');
+    if (!email || !password) {
+      showToast('Please enter both email and password', 'error');
       return;
     }
 
@@ -51,22 +52,7 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
         throw new Error('No user data returned');
       }
     } catch (error: any) {
-      console.error("Sign in error:", error);
-
-      let errorMessage = 'Error signing in';
-
-      // Handle Supabase error messages
-      if (error.message) {
-        if (error.message.includes('Invalid login credentials')) {
-          errorMessage = 'Invalid email or password. Please try again.';
-        } else if (error.message.includes('network')) {
-          errorMessage = 'Network error. Please check your internet connection and try again.';
-        } else {
-          errorMessage = error.message;
-        }
-      }
-
-      Alert.alert('Sign In Failed', errorMessage);
+      showToast(error.message || 'Failed to sign in', 'error');
     } finally {
       setLoading(false);
     }

@@ -25,12 +25,11 @@ export const createGame = async (gameData: GameData): Promise<GameResponse> => {
       .insert({
         creator_id: user.id,
         target_email: gameData.target_email,
+        target_name: gameData.target_name,
         game_name: gameData.game_name,
         occasion: gameData.occasion,
-        theme: gameData.theme,
         is_premium: gameData.is_premium || false,
         privacy_setting: gameData.privacy_setting || 'private',
-        time_limit: gameData.time_limit,
       })
       .select()
       .single()
@@ -118,9 +117,7 @@ export const updateGame = async (gameId: string, gameData: Partial<GameData>): P
       .update({
         game_name: gameData.game_name,
         occasion: gameData.occasion,
-        theme: gameData.theme,
         privacy_setting: gameData.privacy_setting,
-        time_limit: gameData.time_limit,
         updated_at: new Date(),
       })
       .eq('id', gameId)
@@ -407,36 +404,64 @@ export const getUserGames = async (): Promise<{ games: GameItem[], error: Error 
 // Send game invite with magic link
 export const sendGameInvite = async (gameId: string, targetEmail: string): Promise<{ success: boolean, error: Error | null }> => {
   try {
+    console.log('Starting game invite process...');
     const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
 
-    if (!user) {
-      throw new Error('User not authenticated');
+    console.log('Fetching game details...');
+    // Get the game details first
+    const { data: game, error: gameError } = await supabase
+      .from('games')
+      .select('*')
+      .eq('id', gameId)
+      .single();
+
+    if (gameError) throw gameError;
+    if (!game) throw new Error('Game not found');
+
+    console.log('Game found:', { gameId, targetEmail });
+
+    // Generate access code if it doesn't exist
+    if (!game.access_code) {
+      console.log('Generating new access code...');
+      const accessCode = generateRandomCode(6);
+      const { error: updateError } = await supabase
+        .from('games')
+        .update({
+          access_code: accessCode,
+          status: 'pending'
+        })
+        .eq('id', gameId);
+
+      if (updateError) throw updateError;
+      game.access_code = accessCode;
     }
 
-    // Call Supabase Edge Function to send the email with magic link
+    console.log('Calling Edge Function...');
+    // Call the Edge Function using the Supabase Functions client
     const { data, error } = await supabase.functions.invoke('send-game-invite', {
       body: {
         gameId,
         targetEmail,
+        targetName: game.target_name,
         senderId: user.id,
-        senderName: user.user_metadata?.display_name || 'A friend'
-      }
+        senderName: user.user_metadata?.full_name || user.email || 'A friend'
+      },
     });
 
-    if (error) throw error;
+    console.log('Edge Function response:', { data, error });
 
-    // Generate or update access code for the game
-    const accessCode = generateRandomCode(6);
-    const { error: updateError } = await supabase
-      .from('games')
-      .update({
-        access_code: accessCode,
-        status: 'pending'
-      })
-      .eq('id', gameId);
+    if (error) {
+      console.error('Edge Function error:', error);
+      throw new Error(error.message || 'Failed to send invitation');
+    }
 
-    if (updateError) throw updateError;
+    if (!data?.success) {
+      console.error('Edge Function unsuccessful:', data);
+      throw new Error(data?.message || 'Failed to send invitation');
+    }
 
+    console.log('Invitation sent successfully');
     return { success: true, error: null };
   } catch (error) {
     console.error('Error sending game invite:', error);
@@ -453,3 +478,161 @@ function generateRandomCode(length: number): string {
   }
   return result;
 }
+
+// Update questions for a game
+export const updateGameQuestions = async (
+  gameId: string,
+  questions: GameQuestion[],
+  deletedQuestionIds: string[] = []
+): Promise<{ success: boolean, error: Error | null }> => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    console.log('Updating questions for game:', gameId);
+    console.log('Total questions:', questions.length);
+
+    // Separate questions into existing ones (to update) and new ones (to insert)
+    const existingQuestions = questions.filter(q => q.id);
+    const newQuestions = questions.filter(q => !q.id);
+
+    console.log('Existing questions to update:', existingQuestions.length);
+    console.log('New questions to insert:', newQuestions.length);
+    console.log('Questions to delete:', deletedQuestionIds.length);
+
+    // Log IDs of existing questions for debugging
+    if (existingQuestions.length > 0) {
+      console.log('Existing question IDs:', existingQuestions.map(q => q.id));
+    }
+
+    // Update existing questions
+    for (const question of existingQuestions) {
+      console.log('Updating question with ID:', question.id);
+      const { error: updateError } = await supabase
+        .from('questions')
+        .update({
+          question_text: question.question_text,
+          question_type: question.question_type,
+          multiple_choice_options: question.multiple_choice_options || null,
+          allow_multiple_selection: question.allow_multiple_selection || false
+        })
+        .eq('id', question.id);
+
+      if (updateError) {
+        console.error('Error updating question:', updateError);
+        throw updateError;
+      }
+    }
+
+    // Insert new questions
+    if (newQuestions.length > 0) {
+      const questionsWithGameId = newQuestions.map((question, index) => ({
+        game_id: gameId,
+        question_text: question.question_text,
+        question_type: question.question_type,
+        order_num: existingQuestions.length + index + 1,
+        multiple_choice_options: question.multiple_choice_options || null,
+        allow_multiple_selection: question.allow_multiple_selection || false
+      }));
+
+      const { error: insertError } = await supabase
+        .from('questions')
+        .insert(questionsWithGameId);
+
+      if (insertError) {
+        console.error('Error inserting new questions:', insertError);
+        throw insertError;
+      }
+    }
+
+    // Delete questions
+    if (deletedQuestionIds.length > 0) {
+      console.log('Deleting questions with IDs:', deletedQuestionIds);
+      const { error: deleteError } = await supabase
+        .from('questions')
+        .delete()
+        .in('id', deletedQuestionIds);
+
+      if (deleteError) {
+        console.error('Error deleting questions:', deleteError);
+        throw deleteError;
+      }
+    }
+
+    console.log('Successfully updated all questions');
+    return { success: true, error: null };
+  } catch (error) {
+    console.error('Error updating game questions:', error);
+    return { success: false, error: error as Error };
+  }
+};
+
+// Update a single question
+export const updateQuestion = async (question: GameQuestion): Promise<{ success: boolean, error: Error | null }> => {
+  try {
+    console.log('Updating question with ID:', question.id, question.question_text);
+
+    if (!question.id) {
+      throw new Error('Question ID is required for updates');
+    }
+
+    const { error } = await supabase
+      .from('questions')
+      .update({
+        question_text: question.question_text,
+        question_type: question.question_type,
+        multiple_choice_options: question.multiple_choice_options || false,
+        allow_multiple_selection: question.allow_multiple_selection || false
+      })
+      .eq('id', question.id);
+
+    if (error) {
+      console.error('Error updating question:', error);
+      throw error;
+    }
+
+    console.log('Question updated successfully');
+    return { success: true, error: null };
+  } catch (error) {
+    console.error('Error in updateQuestion:', error);
+    return { success: false, error: error as Error };
+  }
+};
+
+export const deleteQuestion = async (questionId: string): Promise<{ success: boolean, error: Error | null }> => {
+  try {
+    const { error } = await supabase
+      .from('questions')
+      .delete()
+      .eq('id', questionId);
+
+    if (error) throw error;
+    return { success: true, error: null };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error : new Error(String(error)) };
+  }
+};
+
+export const createQuestion = async (question: GameQuestion): Promise<{ success: boolean, newQuestion: GameQuestion | null, error: Error | null }> => {
+  try {
+    const { data, error } = await supabase
+      .from('questions')
+      .insert({
+        game_id: question.game_id,
+        question_text: question.question_text,
+        question_type: question.question_type,
+        multiple_choice_options: question.multiple_choice_options,
+        allow_multiple_selection: question.allow_multiple_selection
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return { success: true, newQuestion: data, error: null };
+  } catch (error) {
+    return { success: false, newQuestion: null, error: error instanceof Error ? error : new Error(String(error)) };
+  }
+};

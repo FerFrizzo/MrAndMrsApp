@@ -2,7 +2,7 @@ export const Purple = '#8A2BE2'
 export const PurpleLight = '#9370DB'
 export const Pink = '#FF6B6B'
 export const Blue = '#2D3047'
-export const Green = '#93E1D8'
+export const Green = '#2AC4B1'
 export const Yellow = '#FFD166'
 export const Gray = '#999999'
 

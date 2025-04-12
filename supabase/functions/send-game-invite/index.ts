@@ -9,12 +9,22 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') as string
+// Get environment variables
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 const APP_URL = Deno.env.get('APP_URL') || 'https://mrandmrs.tech'
 const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'noreply@mrandmrs.tech'
 
 // Validate required environment variables
+if (!SUPABASE_URL) {
+  throw new Error('SUPABASE_URL environment variable is not set')
+}
+
+if (!SUPABASE_SERVICE_ROLE_KEY) {
+  throw new Error('SUPABASE_SERVICE_ROLE_KEY environment variable is not set')
+}
+
 if (!RESEND_API_KEY) {
   throw new Error('RESEND_API_KEY environment variable is not set')
 }
@@ -22,6 +32,7 @@ if (!RESEND_API_KEY) {
 interface RequestBody {
   gameId: string
   targetEmail: string
+  targetName: string
   senderId: string
   senderName: string
 }
@@ -33,13 +44,15 @@ serve(async (req: Request) => {
   }
 
   try {
-    // Parse request body
+    console.log('Received request to send game invite')
     const body: RequestBody = await req.json()
-    const { gameId, targetEmail, senderId, senderName } = body
+    console.log('Request body:', JSON.stringify(body))
+    const { gameId, targetEmail, targetName, senderId, senderName } = body
 
     if (!gameId || !targetEmail || !senderId) {
+      console.error('Missing required fields:', { gameId, targetEmail, senderId })
       return new Response(
-        JSON.stringify({ error: 'Missing required fields' }),
+        JSON.stringify({ success: false, error: 'Missing required fields' }),
         {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -50,8 +63,9 @@ serve(async (req: Request) => {
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(targetEmail)) {
+      console.error('Invalid email format:', targetEmail)
       return new Response(
-        JSON.stringify({ error: 'Invalid email format' }),
+        JSON.stringify({ success: false, error: 'Invalid email format' }),
         {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -59,9 +73,11 @@ serve(async (req: Request) => {
       )
     }
 
+    console.log('Initializing Supabase client')
     // Initialize Supabase client with service role key for admin privileges
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-
+    
+    console.log('Fetching game details')
     // Get the game details
     const { data: game, error: gameError } = await supabase
       .from('games')
@@ -70,16 +86,21 @@ serve(async (req: Request) => {
       .single()
 
     if (gameError) {
+      console.error('Error fetching game:', gameError)
       throw new Error(`Error fetching game: ${gameError.message}`)
     }
 
     if (!game) {
+      console.error('Game not found:', gameId)
       throw new Error('Game not found')
     }
+
+    console.log('Game details:', JSON.stringify(game))
 
     // Generate a random access code if one doesn't exist
     let accessCode = game.access_code
     if (!accessCode) {
+      console.log('Generating new access code')
       accessCode = generateRandomCode(6)
       
       // Update the game with the new access code
@@ -92,12 +113,14 @@ serve(async (req: Request) => {
         .eq('id', gameId)
 
       if (updateError) {
+        console.error('Error updating game with access code:', updateError)
         throw new Error(`Error updating game: ${updateError.message}`)
       }
     }
 
     // Generate a deep link URL for the app
     const deepLink = `${APP_URL}/join?code=${accessCode}&gameId=${gameId}`
+    console.log('Generated deep link:', deepLink)
     
     // For testing, use a universal link format
     const universalLink = `https://mrandmrs.page.link?link=${encodeURIComponent(deepLink)}&apn=com.yourdomain.mrandmrs&isi=123456789&ibi=com.yourdomain.mrandmrs`
@@ -110,7 +133,7 @@ serve(async (req: Request) => {
           <div style="max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; border-radius: 10px;">
             <h2 style="color: #8A4FFF; text-align: center;">You've Been Invited!</h2>
             
-            <p>Hi there,</p>
+            <p>Hi ${targetName},</p>
             
             <p><strong>${senderName}</strong> has invited you to play <strong>"${game.game_name}"</strong> in the Mr & Mrs App!</p>
             
@@ -132,6 +155,7 @@ serve(async (req: Request) => {
       </html>
     `
 
+    console.log('Sending email via Resend API')
     // Send email using fetch to Resend API
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -147,11 +171,14 @@ serve(async (req: Request) => {
       }),
     })
 
+    console.log('Resend API response status:', response.status)
     if (!response.ok) {
       const errorData = await response.json()
+      console.error('Error from Resend API:', errorData)
       throw new Error(`Error sending email: ${errorData.message || response.statusText}`)
     }
 
+    console.log('Email sent successfully')
     // Return success response
     return new Response(
       JSON.stringify({ success: true, message: 'Invitation sent successfully' }),
@@ -161,9 +188,14 @@ serve(async (req: Request) => {
       }
     )
   } catch (error: any) {
-    // Return error response
+    console.error('Error in send-game-invite function:', error)
+    // Return error response with more details
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ 
+        success: false, 
+        error: error.message,
+        details: error.stack
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

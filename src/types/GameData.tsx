@@ -7,6 +7,7 @@ export interface GameQuestion {
   question_type: 'text' | 'multiple_choice' | 'true_false';
   order_num?: number;
   multiple_choice_options?: string[] | null;
+  allow_multiple_selection?: boolean;
 }
 
 export interface GameAnswer {
@@ -22,14 +23,13 @@ export interface GameData {
   id?: string;
   creator_id?: string;
   target_email: string;
+  target_name: string;
   game_name: string;
   occasion: string;
-  theme: string;
 
   // Game settings
   is_premium?: boolean;
   privacy_setting?: 'private' | 'public' | 'friends';
-  time_limit?: number | null;
   access_code?: string | null;
   status?: 'created' | 'pending' | 'completed' | string;
 

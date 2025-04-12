@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   TouchableWithoutFeedback,
@@ -19,6 +18,7 @@ import { RootStackParamList } from '../types/RootStackParamList';
 import { useAuth } from '../context/AuthContext';
 import { Purple, PurpleLight } from '../utils/Colors';
 import { signUpWithEmail } from '../services/authService';
+import { useToast } from '../contexts/ToastContext';
 
 type SignUpScreenProps = NativeStackScreenProps<RootStackParamList, 'SignUp'>;
 
@@ -29,67 +29,77 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
   const [confirmPassword, setConfirmPassword] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const { setUser } = useAuth();
+  const { showToast, showDialog } = useToast();
 
   const handleSignUp = async () => {
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      showToast('Passwords do not match', 'error');
       return;
     }
 
     if (!fullName.trim()) {
-      Alert.alert('Error', 'Please enter your full name');
+      showToast('Please enter your full name', 'error');
       return;
     }
 
-    if (!email.trim() || !password.trim()) {
-      Alert.alert('Error', 'Please fill in all fields');
+    if (!email.trim() || !password.trim() || !confirmPassword.trim()) {
+      showToast('Please fill in all fields', 'error');
       return;
     }
 
-    try {
-      setLoading(true);
+    showDialog(
+      'Create Account',
+      'Would you like to create your account?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: () => { }
+        },
+        {
+          text: 'Create',
+          style: 'default',
+          onPress: async () => {
+            try {
+              setLoading(true);
 
-      const { data, error } = await signUpWithEmail(email, password, fullName);
+              const { data, error } = await signUpWithEmail(email, password, fullName);
 
-      if (error) {
-        throw error;
-      }
+              if (error) {
+                throw error;
+              }
 
-      // Show success message and navigate to SignIn
-      Alert.alert(
-        'Success',
-        'Sign up successful!',
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.navigate('SignIn')
+              showToast('Account created successfully!', 'success');
+              navigation.navigate('SignIn');
+            } catch (error: any) {
+              console.error("Sign up error:", error);
+
+              let errorMessage = 'Error signing up';
+
+              // Handle Supabase error messages
+              if (error.message) {
+                if (error.message.includes('already registered')) {
+                  errorMessage = 'This email is already in use. Please try another email or sign in.';
+                } else if (error.message.includes('invalid email')) {
+                  errorMessage = 'The email address is invalid. Please enter a valid email.';
+                } else if (error.message.includes('password')) {
+                  errorMessage = 'The password is too weak. Please use a stronger password.';
+                } else if (error.message.includes('network')) {
+                  errorMessage = 'Network error. Please check your internet connection and try again.';
+                } else {
+                  errorMessage = error.message;
+                }
+              }
+
+              showToast(errorMessage, 'error');
+            } finally {
+              setLoading(false);
+            }
           }
-        ]
-      );
-    } catch (error: any) {
-      console.error("Sign up error:", error);
-
-      let errorMessage = 'Error signing up';
-
-      // Handle Supabase error messages
-      if (error.message) {
-        if (error.message.includes('already registered')) {
-          errorMessage = 'This email is already in use. Please try another email or sign in.';
-        } else if (error.message.includes('invalid email')) {
-          errorMessage = 'The email address is invalid. Please enter a valid email.';
-        } else if (error.message.includes('password')) {
-          errorMessage = 'The password is too weak. Please use a stronger password.';
-        } else if (error.message.includes('network')) {
-          errorMessage = 'Network error. Please check your internet connection and try again.';
-        } else {
-          errorMessage = error.message;
         }
-      }
-
-      Alert.alert('Sign Up Failed', errorMessage);
-    } finally {
-      setLoading(false);
-    }
+      ],
+      'confirm'
+    );
   };
 
   return (

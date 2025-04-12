@@ -6,17 +6,20 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   SafeAreaView,
   Share,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/RootStackParamList';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Purple, PurpleLight, getStatusColor } from '../utils/Colors';
-import { getGameWithQuestions, sendGameInvite } from '../services/gameService';
+import { getGameWithQuestions, sendGameInvite, updateQuestion, deleteQuestion, createQuestion } from '../services/gameService';
 import { GameData, GameQuestion } from '../types/GameData';
-import { AntDesign, MaterialCommunityIcons, Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { AntDesign, MaterialCommunityIcons, Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
+import MultipleChoiceEditor from '../components/MultipleChoiceEditor';
+import { useToast } from '../contexts/ToastContext';
 
 type GameDetailsScreenProps = NativeStackScreenProps<RootStackParamList, 'GameDetails' | 'GameQuestion'>;
 
@@ -26,64 +29,252 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
   const [questions, setQuestions] = useState<GameQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [sendingInvite, setSendingInvite] = useState(false);
+  const [editingQuestion, setEditingQuestion] = useState<GameQuestion | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [questionText, setQuestionText] = useState('');
+  const [questionType, setQuestionType] = useState<'text' | 'multiple_choice' | 'true_false'>('text');
+  const [isNewQuestion, setIsNewQuestion] = useState(false);
+  const [editIndex, setEditIndex] = useState(-1);
+  const [saving, setSaving] = useState(false);
+  const [multipleChoiceOptions, setMultipleChoiceOptions] = useState<string[]>([]);
+  const [allowsMultipleSelection, setAllowsMultipleSelection] = useState(false);
+  const { showToast, showDialog } = useToast();
 
   useEffect(() => {
     fetchGameDetails();
   }, [gameId]);
 
   const fetchGameDetails = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const { game: gameData, error } = await getGameWithQuestions(gameId);
+      const { game, error } = await getGameWithQuestions(gameId);
+      if (error) throw error;
 
-      if (error) {
-        throw error;
-      }
-
-      if (gameData) {
-        setGame(gameData);
-        setQuestions(gameData.questions || []);
-      }
-    } catch (error) {
-      console.error('Error fetching game details:', error);
-      Alert.alert('Error', 'Could not load game details. Please try again.');
+      setGame(game);
+      setQuestions(game?.questions || []);
+    } catch (error: any) {
+      showToast(error.message || 'Failed to load game details', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleShareGame = async () => {
-    if (!game) return;
+  const handleEditQuestion = (question: GameQuestion, index: number) => {
+    console.log('Editing question with ID:', question.id);
+    setEditingQuestion({ ...question }); // Make a proper copy to preserve the ID
+    setQuestionText(question.question_text);
+    setQuestionType(question.question_type);
+    setIsNewQuestion(false);
+    setEditIndex(index);
+    setMultipleChoiceOptions(question.multiple_choice_options || []);
+    setAllowsMultipleSelection(question.allow_multiple_selection || false);
+    setModalVisible(true);
+  };
 
+  const handleAddQuestion = () => {
+    setEditingQuestion(null);
+    setQuestionText('');
+    setQuestionType('text');
+    setIsNewQuestion(true);
+    setEditIndex(-1);
+    setMultipleChoiceOptions([]);
+    setAllowsMultipleSelection(false);
+    setModalVisible(true);
+  };
+
+  const handleDeleteQuestion = async (index: number) => {
+    const questionToDelete = questions[index];
+
+    if (!questionToDelete || !questionToDelete.id) {
+      showToast('Cannot delete question - missing ID', 'error');
+      return;
+    }
+
+    showDialog(
+      'Delete Question',
+      'Are you sure you want to delete this question?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: () => { }
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              const { success, error } = await deleteQuestion(questionToDelete.id as string);
+
+              if (error) {
+                throw error;
+              }
+
+              if (success) {
+                // Update local state after successful deletion
+                const updatedQuestions = [...questions];
+                updatedQuestions.splice(index, 1);
+                setQuestions(updatedQuestions);
+
+                if (game) {
+                  setGame({
+                    ...game,
+                    questions: updatedQuestions
+                  });
+                }
+
+                showToast('Question deleted successfully', 'success');
+              }
+            } catch (error: any) {
+              console.error('Error deleting question:', error);
+              showToast(error.message || 'Failed to delete question', 'error');
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ],
+      'confirm'
+    );
+  };
+
+  const handleSaveQuestion = async () => {
+    if (!questionText.trim()) {
+      showToast('Please enter a question', 'error');
+      return;
+    }
+
+    if (questionType === 'multiple_choice' && (!multipleChoiceOptions || multipleChoiceOptions.length < 2)) {
+      showToast('Multiple choice questions must have at least 2 options', 'error');
+      return;
+    }
+
+    setSaving(true);
     try {
-      setSendingInvite(true);
+      if (isNewQuestion) {
+        // Create new question
+        const newQuestion: GameQuestion = {
+          question_text: questionText.trim(),
+          question_type: questionType,
+          game_id: gameId,
+          multiple_choice_options: questionType === 'multiple_choice' ? multipleChoiceOptions : [],
+          allow_multiple_selection: questionType === 'multiple_choice' ? allowsMultipleSelection : false
+        };
 
-      // Send invite via email with magic link
-      const { success, error } = await sendGameInvite(gameId, game.target_email);
+        const { success, newQuestion: createdQuestion, error } = await createQuestion(newQuestion);
 
-      if (error) throw error;
-
-      if (success) {
-        // Try to use the native share dialog as a fallback
-        try {
-          const result = await Share.share({
-            message: `Join me for a game of "Mr & Mrs"! I've sent an invite to your email. Download the app and find out how well you know your partner!`,
-            title: `${game.game_name} Invitation`,
-          });
-        } catch (shareError) {
-          console.log('Share error:', shareError);
+        if (error) {
+          throw error;
         }
 
-        Alert.alert(
-          'Invitation Sent!',
-          `An invitation has been sent to ${game.target_email} with a special link to access this game.`
-        );
+        if (success && createdQuestion) {
+          // Update the local state with the newly created question
+          const updatedQuestions = [...questions, createdQuestion];
+          setQuestions(updatedQuestions);
+
+          if (game) {
+            setGame({
+              ...game,
+              questions: updatedQuestions
+            });
+          }
+
+          setModalVisible(false);
+          showToast('Question created successfully', 'success');
+        }
+      } else {
+        // Update existing question
+        const updatedQuestion: GameQuestion = {
+          ...editingQuestion,
+          question_text: questionText.trim(),
+          question_type: questionType,
+          multiple_choice_options: questionType === 'multiple_choice' ? multipleChoiceOptions : [],
+          allow_multiple_selection: questionType === 'multiple_choice' ? allowsMultipleSelection : false
+        };
+
+        if (updatedQuestion.id) {
+          const { success, error } = await updateQuestion(updatedQuestion);
+
+          if (error) {
+            throw error;
+          }
+
+          if (success) {
+            // Update the local state
+            const updatedQuestions = [...questions];
+            updatedQuestions[editIndex] = updatedQuestion;
+            setQuestions(updatedQuestions);
+
+            if (game) {
+              setGame({
+                ...game,
+                questions: updatedQuestions
+              });
+            }
+
+            setModalVisible(false);
+            showToast('Question updated successfully', 'success');
+          }
+        } else {
+          showToast('Cannot update question - missing ID', 'error');
+        }
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to send invitation');
+      console.error('Error saving question:', error);
+      showToast(error.message || 'Failed to save question', 'error');
     } finally {
-      setSendingInvite(false);
+      setSaving(false);
     }
+  };
+
+  const handleSendInvite = async () => {
+    if (!game) {
+      showToast('Game not found', 'error');
+      return;
+    }
+
+    showDialog(
+      'Send Invitation',
+      'Do you want to send an invitation to join this game?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+          onPress: () => { }
+        },
+        {
+          text: 'Send',
+          style: 'default',
+          onPress: async () => {
+            try {
+              setSendingInvite(true);
+              const { success, error } = await sendGameInvite(gameId, game.target_email);
+
+              if (error) throw error;
+
+              if (success) {
+                try {
+                  await Share.share({
+                    message: `Join me for a game of "Mr & Mrs"! I've sent an invite to your email. Download the app and find out how well you know your partner!`,
+                    title: `${game.game_name} Invitation`,
+                  });
+                } catch (shareError) {
+                  console.log('Share error:', shareError);
+                }
+
+                showToast(`An invitation has been sent to ${game.target_email} with a special link to access this game.`, 'success');
+              }
+            } catch (error: any) {
+              showToast(error.message || 'Failed to send invitation', 'error');
+            } finally {
+              setSendingInvite(false);
+            }
+          }
+        }
+      ],
+      'confirm'
+    );
   };
 
   const formatDate = (dateString: string) => {
@@ -105,6 +296,145 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
     );
   }
 
+  const renderQuestionModal = () => {
+    return (
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {isNewQuestion ? 'Add Question' : 'Edit Question'}
+              </Text>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setModalVisible(false)}
+              >
+                <AntDesign name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalScrollView}>
+              <Text style={styles.inputLabel}>Question Text</Text>
+              <TextInput
+                style={styles.questionInput}
+                value={questionText}
+                onChangeText={setQuestionText}
+                placeholder="Enter your question here"
+                placeholderTextColor="#999"
+                multiline
+              />
+
+              <Text style={styles.inputLabel}>Question Type</Text>
+              <View style={styles.typeButtonsContainer}>
+                <TouchableOpacity
+                  style={[
+                    styles.typeButton,
+                    questionType === 'text' && styles.typeButtonActive
+                  ]}
+                  onPress={() => setQuestionType('text')}
+                >
+                  <Text style={[
+                    styles.typeButtonText,
+                    questionType === 'text' && styles.typeButtonTextActive
+                  ]}>
+                    Text Response
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.typeButton,
+                    questionType === 'multiple_choice' && styles.typeButtonActive
+                  ]}
+                  onPress={() => setQuestionType('multiple_choice')}
+                >
+                  <Text style={[
+                    styles.typeButtonText,
+                    questionType === 'multiple_choice' && styles.typeButtonTextActive
+                  ]}>
+                    Multiple Choice
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.typeButton,
+                    questionType === 'true_false' && styles.typeButtonActive
+                  ]}
+                  onPress={() => setQuestionType('true_false')}
+                >
+                  <Text style={[
+                    styles.typeButtonText,
+                    questionType === 'true_false' && styles.typeButtonTextActive
+                  ]}>
+                    True/False
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {questionType === 'multiple_choice' && (
+                <View style={styles.multipleChoiceContainer}>
+                  <Text style={styles.inputLabel}>Multiple Choice Options</Text>
+
+
+                  <View style={styles.editorContainer}>
+                    <MultipleChoiceEditor
+                      options={multipleChoiceOptions}
+                      allowsMultipleSelection={allowsMultipleSelection}
+                      onOptionsChange={setMultipleChoiceOptions}
+                      onAllowsMultipleSelectionChange={setAllowsMultipleSelection}
+                    />
+                  </View>
+                  <TouchableOpacity
+                    style={styles.checkboxContainer}
+                    onPress={() => setAllowsMultipleSelection(!allowsMultipleSelection)}
+                  >
+                    <View style={[
+                      styles.checkbox,
+                      allowsMultipleSelection && styles.checkboxChecked
+                    ]}>
+                      {allowsMultipleSelection && (
+                        <MaterialIcons name="check" size={16} color="white" />
+                      )}
+                    </View>
+                    <Text style={styles.checkboxLabel}>Allow multiple answers</Text>
+                  </TouchableOpacity>
+                </View>
+
+              )}
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setModalVisible(false)}
+                disabled={saving}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={handleSaveQuestion}
+                disabled={saving}
+              >
+                {saving ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  <Text style={styles.saveButtonText}>Save</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
   return (
     <LinearGradient
       colors={[Purple, PurpleLight]}
@@ -123,7 +453,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
           <Text style={styles.headerTitle}>Game Details</Text>
           <TouchableOpacity
             style={styles.shareButton}
-            onPress={handleShareGame}
+            onPress={handleSendInvite}
             disabled={sendingInvite}
           >
             {sendingInvite ? (
@@ -148,7 +478,10 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
                 <View style={styles.infoRow}>
                   <Ionicons name="person-outline" size={20} color={Purple} />
                   <Text style={styles.infoLabel}>Target:</Text>
-                  <Text style={styles.infoValue}>{game.target_email}</Text>
+                  <View style={styles.targetInfo}>
+                    <Text style={styles.infoValue}>{game.target_name}</Text>
+                    <Text style={styles.infoValueSecondary}>{game.target_email}</Text>
+                  </View>
                 </View>
 
                 <View style={styles.infoRow}>
@@ -165,38 +498,24 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
                   </View>
                 )}
 
-                {game.theme && (
-                  <View style={styles.infoRow}>
-                    <MaterialCommunityIcons name="palette-outline" size={20} color={Purple} />
-                    <Text style={styles.infoLabel}>Theme:</Text>
-                    <Text style={styles.infoValue}>{game.theme}</Text>
-                  </View>
-                )}
-
                 <View style={styles.infoRow}>
                   <MaterialCommunityIcons name={game.is_premium ? "crown" : "crown-outline"} size={20} color={game.is_premium ? "#FFCC00" : Purple} />
                   <Text style={styles.infoLabel}>Type:</Text>
                   <Text style={styles.infoValue}>{game.is_premium ? 'Premium' : 'Basic'}</Text>
                 </View>
 
-                {game.time_limit && (
+                {game.privacy_setting && (
                   <View style={styles.infoRow}>
-                    <Ionicons name="time-outline" size={20} color={Purple} />
-                    <Text style={styles.infoLabel}>Time Limit:</Text>
-                    <Text style={styles.infoValue}>{game.time_limit} minutes</Text>
+                    <Ionicons name="lock-closed-outline" size={20} color={Purple} />
+                    <Text style={styles.infoLabel}>Privacy:</Text>
+                    <Text style={styles.infoValue}>{game.privacy_setting || 'Private'}</Text>
                   </View>
                 )}
-
-                <View style={styles.infoRow}>
-                  <Ionicons name="lock-closed-outline" size={20} color={Purple} />
-                  <Text style={styles.infoLabel}>Privacy:</Text>
-                  <Text style={styles.infoValue}>{game.privacy_setting || 'Private'}</Text>
-                </View>
               </View>
 
               <TouchableOpacity
                 style={styles.inviteButton}
-                onPress={handleShareGame}
+                onPress={handleSendInvite}
                 disabled={sendingInvite}
               >
                 {sendingInvite ? (
@@ -204,7 +523,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
                 ) : (
                   <>
                     <MaterialIcons name="email" size={20} color="white" style={styles.inviteIcon} />
-                    <Text style={styles.inviteButtonText}>Send Invitation to {game.target_email}</Text>
+                    <Text style={styles.inviteButtonText}>Send Invitation to {game.target_name}</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -213,11 +532,57 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
                 <Text style={styles.sectionTitle}>Questions ({questions.length})</Text>
                 {questions.map((question, index) => (
                   <View key={index} style={styles.questionCard}>
-                    <Text style={styles.questionNumber}>Question {index + 1}</Text>
+                    <View style={styles.questionActions}>
+                      <Text style={styles.questionNumber}>Question {index + 1}</Text>
+                      <View style={styles.actionButtons}>
+                        <TouchableOpacity
+                          style={styles.actionButton}
+                          onPress={() => handleEditQuestion(question, index)}
+                        >
+                          <Feather name="edit" size={16} color={Purple} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.actionButton}
+                          onPress={() => handleDeleteQuestion(index)}
+                        >
+                          <Feather name="trash-2" size={16} color="#FF3B30" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
                     <Text style={styles.questionText}>{question.question_text}</Text>
-                    <Text style={styles.questionType}>Type: {question.question_type}</Text>
+                    <View style={styles.questionFooter}>
+                      <Text style={styles.questionType}>Type: {
+                        question.question_type === 'multiple_choice' ? 'Multiple Choice' :
+                          question.question_type === 'text' ? 'Text Response' :
+                            question.question_type === 'true_false' ? 'True/False' :
+                              question.question_type
+                      }</Text>
+                      {question.question_type === 'multiple_choice' &&
+                        question.allow_multiple_selection && (
+                          <Text style={styles.multipleAnswersLabel}>Multiple answers allowed</Text>
+                        )}
+                    </View>
+
+                    {question.question_type === 'multiple_choice' && question.multiple_choice_options && question.multiple_choice_options.length > 0 && (
+                      <View style={styles.optionsContainer}>
+                        {question.multiple_choice_options.map((option, optionIndex) => (
+                          <View key={optionIndex} style={styles.optionItem}>
+                            <View style={styles.optionBullet} />
+                            <Text style={styles.optionText}>{option}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
                   </View>
                 ))}
+
+                <TouchableOpacity
+                  style={styles.addQuestionButton}
+                  onPress={handleAddQuestion}
+                >
+                  <AntDesign name="plus" size={18} color="white" />
+                  <Text style={styles.addQuestionButtonText}>Add Question</Text>
+                </TouchableOpacity>
               </View>
             </View>
           )}
@@ -232,6 +597,8 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
           </TouchableOpacity>
         </View>
       </SafeAreaView>
+
+      {renderQuestionModal()}
     </LinearGradient>
   );
 };
@@ -326,6 +693,11 @@ const styles = StyleSheet.create({
     color: '#666',
     flex: 1,
   },
+  infoValueSecondary: {
+    fontSize: 16,
+    color: '#666',
+    flex: 1,
+  },
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
@@ -358,6 +730,12 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
   },
+  questionActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   questionNumber: {
     fontSize: 14,
     fontWeight: 'bold',
@@ -369,10 +747,19 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 8,
   },
+  questionFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   questionType: {
     fontSize: 12,
-    color: '#666',
-    fontStyle: 'italic',
+    color: '#333',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    overflow: 'hidden',
   },
   buttonContainer: {
     position: 'absolute',
@@ -392,6 +779,195 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  multipleAnswersLabel: {
+    fontSize: 12,
+    color: Purple,
+    fontWeight: '500',
+    backgroundColor: 'rgba(138, 43, 226, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  optionsContainer: {
+    marginTop: 8,
+  },
+  optionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  optionBullet: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Purple,
+    marginRight: 8,
+  },
+  optionText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 20,
+    width: '90%',
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  closeButton: {
+    padding: 8,
+  },
+  modalScrollView: {
+    maxHeight: 400,
+    marginVertical: 16,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: 'bold'
+  },
+  questionInput: {
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#DDD',
+    borderRadius: 8,
+    minHeight: 100,
+    textAlignVertical: 'top',
+  },
+  typeButtonsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 16,
+  },
+  typeButton: {
+    padding: 10,
+    borderWidth: 2,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  typeButtonActive: {
+    borderColor: Purple,
+  },
+  typeButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  typeButtonTextActive: {
+    color: Purple,
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  cancelButton: {
+    padding: 12,
+    borderWidth: 2,
+    borderColor: '#ccc',
+    borderRadius: 8,
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  saveButton: {
+    padding: 12,
+    backgroundColor: Purple,
+    borderRadius: 8,
+    alignItems: 'center',
+    minWidth: 100,
+  },
+  saveButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  actionButton: {
+    padding: 8,
+    marginLeft: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    borderRadius: 20,
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addQuestionButton: {
+    flexDirection: 'row',
+    backgroundColor: Purple,
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    marginBottom: 24,
+  },
+  addQuestionButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  multipleChoiceContainer: {
+    marginTop: 10,
+    marginBottom: 16,
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    marginTop: 4,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderWidth: 2,
+    borderColor: '#ccc',
+    borderRadius: 4,
+    marginRight: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxChecked: {
+    borderColor: Purple,
+    backgroundColor: Purple,
+  },
+  checkboxLabel: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#333',
+  },
+  editorContainer: {
+    marginTop: 1,
+  },
+  targetInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });
 
