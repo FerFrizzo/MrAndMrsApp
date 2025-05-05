@@ -15,11 +15,12 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/RootStackParamList';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Purple, PurpleLight, getStatusColor } from '../utils/Colors';
-import { getGameWithQuestions, sendGameInvite, updateQuestion, deleteQuestion, createQuestion } from '../services/gameService';
-import { GameData, GameQuestion } from '../types/GameData';
+import { getGameWithQuestions, sendGameInvite, updateQuestion, deleteQuestion, createQuestion, updateGame } from '../services/gameService';
+import { GameData, GameQuestion, GAME_STATUS_MAP } from '../types/GameData';
 import { AntDesign, MaterialCommunityIcons, Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import MultipleChoiceEditor from '../components/MultipleChoiceEditor';
 import { useToast } from '../contexts/ToastContext';
+import { supabase } from '../config/supabaseClient';
 
 type GameDetailsScreenProps = NativeStackScreenProps<RootStackParamList, 'GameDetails' | 'GameQuestion'>;
 
@@ -39,10 +40,27 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
   const [multipleChoiceOptions, setMultipleChoiceOptions] = useState<string[]>([]);
   const [allowsMultipleSelection, setAllowsMultipleSelection] = useState(false);
   const { showToast, showDialog } = useToast();
+  const [status, setStatus] = useState<keyof typeof GAME_STATUS_MAP>('in_creation');
+  const [targetStarted, setTargetStarted] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchGameDetails();
   }, [gameId]);
+
+  useEffect(() => {
+    if (game) {
+      setStatus(game.status || 'in_creation');
+      // If the game is completed, the target has started/finished
+      setTargetStarted(game.status === 'completed');
+    }
+  }, [game]);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setCurrentUserId(data?.user?.id ?? null);
+    });
+  }, []);
 
   const fetchGameDetails = async () => {
     setLoading(true);
@@ -60,7 +78,6 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
   };
 
   const handleEditQuestion = (question: GameQuestion, index: number) => {
-    console.log('Editing question with ID:', question.id);
     setEditingQuestion({ ...question }); // Make a proper copy to preserve the ID
     setQuestionText(question.question_text);
     setQuestionType(question.question_type);
@@ -162,10 +179,13 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
           allow_multiple_selection: questionType === 'multiple_choice' ? allowsMultipleSelection : false
         };
 
+        console.log('Creating new question:', newQuestion);
         const { success, newQuestion: createdQuestion, error } = await createQuestion(newQuestion);
 
         if (error) {
-          throw error;
+          console.error('Error creating question:', error);
+          showToast(error.message || 'Failed to create question', 'error');
+          return;
         }
 
         if (success && createdQuestion) {
@@ -194,10 +214,13 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
         };
 
         if (updatedQuestion.id) {
+          console.log('Updating question:', updatedQuestion);
           const { success, error } = await updateQuestion(updatedQuestion);
 
           if (error) {
-            throw error;
+            console.error('Error updating question:', error);
+            showToast(error.message || 'Failed to update question', 'error');
+            return;
           }
 
           if (success) {
@@ -222,7 +245,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
       }
     } catch (error: any) {
       console.error('Error saving question:', error);
-      showToast(error.message || 'Failed to save question', 'error');
+      showToast(error?.message || 'An unexpected error occurred while saving the question', 'error');
     } finally {
       setSaving(false);
     }
@@ -231,6 +254,11 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
   const handleSendInvite = async () => {
     if (!game) {
       showToast('Game not found', 'error');
+      return;
+    }
+
+    if (game.status !== 'ready_to_play') {
+      showToast(`This game needs to be set to Ready to Play so an invite can be sent to ${game.target_name}`, 'warning')
       return;
     }
 
@@ -275,6 +303,28 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
       ],
       'confirm'
     );
+  };
+
+  const handleStatusChange = async (newStatus: keyof typeof GAME_STATUS_MAP) => {
+    if (!game) return;
+    if (newStatus === status) return;
+    try {
+      setLoading(true);
+      // Update game status
+      const { error } = await updateGame(game.id!, { status: newStatus });
+      if (error) throw error;
+      setStatus(newStatus);
+      setGame({ ...game, status: newStatus });
+      if (newStatus === 'ready_to_play') {
+        // Send invite when moving to ready_to_play
+        await handleSendInvite();
+      }
+      showToast(`Game status updated to ${GAME_STATUS_MAP[newStatus]}`, 'success');
+    } catch (error: any) {
+      showToast(error.message || 'Failed to update game status', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -446,7 +496,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => navigation.goBack()}
+            onPress={() => navigation.navigate('MainTabs')}
           >
             <AntDesign name="arrowleft" size={24} color="white" />
           </TouchableOpacity>
@@ -480,7 +530,6 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
                   <Text style={styles.infoLabel}>Target:</Text>
                   <View style={styles.targetInfo}>
                     <Text style={styles.infoValue}>{game.target_name}</Text>
-                    <Text style={styles.infoValueSecondary}>{game.target_email}</Text>
                   </View>
                 </View>
 
@@ -504,13 +553,6 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
                   <Text style={styles.infoValue}>{game.is_premium ? 'Premium' : 'Basic'}</Text>
                 </View>
 
-                {game.privacy_setting && (
-                  <View style={styles.infoRow}>
-                    <Ionicons name="lock-closed-outline" size={20} color={Purple} />
-                    <Text style={styles.infoLabel}>Privacy:</Text>
-                    <Text style={styles.infoValue}>{game.privacy_setting || 'Private'}</Text>
-                  </View>
-                )}
               </View>
 
               <TouchableOpacity
@@ -596,6 +638,39 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
             <Text style={styles.playButtonText}>Play Game</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Status Switcher for Creator */}
+        {game && currentUserId && game.creator_id === currentUserId && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', margin: 16 }}>
+            <Text style={{ fontWeight: 'bold', marginRight: 8 }}>Status:</Text>
+            <TouchableOpacity
+              style={{
+                backgroundColor: status === 'in_creation' ? Purple : '#eee',
+                padding: 8,
+                borderRadius: 8,
+                marginRight: 8,
+              }}
+              disabled={status === 'in_creation' || (status === 'ready_to_play' && targetStarted)}
+              onPress={() => handleStatusChange('in_creation')}
+            >
+              <Text style={{ color: status === 'in_creation' ? 'white' : '#333' }}>In Creation</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{
+                backgroundColor: status === 'ready_to_play' ? Purple : '#eee',
+                padding: 8,
+                borderRadius: 8,
+              }}
+              disabled={status === 'ready_to_play' && targetStarted}
+              onPress={() => handleStatusChange('ready_to_play')}
+            >
+              <Text style={{ color: status === 'ready_to_play' ? 'white' : '#333' }}>Ready to Play</Text>
+            </TouchableOpacity>
+            <View style={{ marginLeft: 8 }}>
+              <Text style={{ color: '#888' }}>{GAME_STATUS_MAP[status]}</Text>
+            </View>
+          </View>
+        )}
       </SafeAreaView>
 
       {renderQuestionModal()}

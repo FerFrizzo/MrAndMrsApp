@@ -18,6 +18,12 @@ export interface GameAnswer {
   is_match?: boolean;
 }
 
+export const GAME_STATUS_MAP = {
+  in_creation: 'In Creation',
+  ready_to_play: 'Ready to Play',
+  completed: 'Completed',
+} as const;
+
 export interface GameData {
   // Basic game information
   id?: string;
@@ -29,9 +35,8 @@ export interface GameData {
 
   // Game settings
   is_premium?: boolean;
-  privacy_setting?: 'private' | 'public' | 'friends';
-  access_code?: string | null;
-  status?: 'created' | 'pending' | 'completed' | string;
+  access_code?: string;
+  status?: keyof typeof GAME_STATUS_MAP;
 
   // Timestamps
   created_at?: string;

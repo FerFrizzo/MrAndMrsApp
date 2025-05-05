@@ -29,7 +29,7 @@ export const createGame = async (gameData: GameData): Promise<GameResponse> => {
         game_name: gameData.game_name,
         occasion: gameData.occasion,
         is_premium: gameData.is_premium || false,
-        privacy_setting: gameData.privacy_setting || 'private',
+        status: 'in_creation',
       })
       .select()
       .single()
@@ -47,6 +47,7 @@ export const createGame = async (gameData: GameData): Promise<GameResponse> => {
         question_type: q.question_type || 'text',
         order_num: index + 1,
         multiple_choice_options: q.multiple_choice_options || null,
+        allow_multiple_selection: q.allow_multiple_selection || false
       }))
 
       console.log('questionsToInsert', questionsToInsert);
@@ -117,7 +118,6 @@ export const updateGame = async (gameId: string, gameData: Partial<GameData>): P
       .update({
         game_name: gameData.game_name,
         occasion: gameData.occasion,
-        privacy_setting: gameData.privacy_setting,
         updated_at: new Date(),
       })
       .eq('id', gameId)
@@ -210,6 +210,39 @@ export const submitAnswers = async (gameId: string, answers: Record<string, stri
       if (insertError) throw insertError
     }
 
+    // --- NEW LOGIC: If target finished, set game to completed ---
+    if (!isCreator) {
+      // Fetch all questions for the game
+      const { data: allQuestions, error: allQuestionsError } = await supabase
+        .from('questions')
+        .select('id')
+        .eq('game_id', gameId)
+
+      if (allQuestionsError) throw allQuestionsError;
+
+      // Fetch all answers for these questions
+      const { data: allAnswers, error: allAnswersError } = await supabase
+        .from('answers')
+        .select('question_id, target_answer')
+        .in('question_id', allQuestions.map(q => q.id))
+
+      if (allAnswersError) throw allAnswersError;
+
+      // Check if every question has a non-null target_answer
+      const allAnswered = allQuestions.every(q =>
+        allAnswers.find(a => a.question_id === q.id && a.target_answer !== null && a.target_answer !== '')
+      );
+
+      if (allAnswered) {
+        // Update game status to completed
+        await supabase
+          .from('games')
+          .update({ status: 'completed' })
+          .eq('id', gameId);
+      }
+    }
+    // --- END NEW LOGIC ---
+
     return { error: null }
   } catch (error) {
     return { error: error instanceof Error ? error : new Error(String(error)) }
@@ -301,6 +334,7 @@ export const getTargetGames = async (): Promise<GamesResponse> => {
       .from('games')
       .select('*')
       .eq('target_user_id', user.id)
+      .in('status', ['ready_to_play', 'completed'])
       .order('created_at', { ascending: false })
 
     if (error) throw error
@@ -344,7 +378,7 @@ export const joinGame = async (accessCode: string): Promise<GameResponse> => {
 }
 
 // Get games for the current user
-export const getUserGames = async (): Promise<{ games: GameItem[], error: Error | null }> => {
+export const getUserGames = async (): Promise<{ createdGames: GameItem[], targetGames: GameItem[], error: Error | null }> => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -352,7 +386,7 @@ export const getUserGames = async (): Promise<{ games: GameItem[], error: Error 
       throw new Error('Not authenticated');
     }
 
-    // // Fetch games created by this user
+    // Fetch games created by this user
     const { data: createdGames, error: createdError } = await supabase
       .from('games')
       .select(`
@@ -365,41 +399,63 @@ export const getUserGames = async (): Promise<{ games: GameItem[], error: Error 
       `)
       .eq('creator_id', user.id)
       .order('created_at', { ascending: false });
-    const uid = user.id;
-    // const { data: createdGames, error: createdError } = await supabase
-    //   .from('games')
-    //   .select(`
-    //     id,
-    //     game_name,
-    //     created_at,
-    //     is_premium,
-    //     status
-    //   `)
-    //   .eq('creator_id', user.id)
-    //   .order('created_at', { ascending: false });
-
-    console.log('createdGames', uid, createdGames, createdError);
 
     if (createdError) throw createdError;
 
-    // Process the data to include question count
-    const formattedGames = createdGames.map(game => ({
+    // Fetch games where user is the target (by email)
+    const { data: targetGames, error: targetError } = await supabase
+      .from('games')
+      .select(`
+        id,
+        game_name,
+        created_at,
+        is_premium,
+        status,
+        questions(count)
+      `)
+      .eq('target_email', user.email)
+      .eq('status', 'ready_to_play') //todo: check if this works
+      .order('created_at', { ascending: false });
+
+
+    if (targetError) throw targetError;
+
+    // Process created games
+    const formattedCreatedGames = createdGames.map(game => ({
       id: game.id,
       title: game.game_name,
       createdAt: new Date(game.created_at).toLocaleDateString(),
       questionCount: game.questions[0]?.count || 0,
-      // questionCount: 0,
       status: game.status || 'created',
       isPremium: game.is_premium || false,
       colorDot: getStatusColor(game.status || 'created')
     }));
 
-    return { games: formattedGames, error: null };
+    // Process target games
+    const formattedTargetGames = targetGames.map(game => ({
+      id: game.id,
+      title: game.game_name,
+      createdAt: new Date(game.created_at).toLocaleDateString(),
+      questionCount: game.questions[0]?.count || 0,
+      status: game.status || 'created',
+      isPremium: game.is_premium || false,
+      colorDot: getStatusColor(game.status || 'created')
+    }));
+
+    return {
+      createdGames: formattedCreatedGames,
+      targetGames: formattedTargetGames,
+      error: null
+    };
   } catch (error) {
     console.error('Error fetching games:', error);
-    return { games: [], error: error as Error };
+    return {
+      createdGames: [],
+      targetGames: [],
+      error: error as Error
+    };
   }
-}
+};
 
 // Send game invite with magic link
 export const sendGameInvite = async (gameId: string, targetEmail: string): Promise<{ success: boolean, error: Error | null }> => {
@@ -584,21 +640,21 @@ export const updateQuestion = async (question: GameQuestion): Promise<{ success:
       .update({
         question_text: question.question_text,
         question_type: question.question_type,
-        multiple_choice_options: question.multiple_choice_options || false,
+        multiple_choice_options: question.multiple_choice_options || null,
         allow_multiple_selection: question.allow_multiple_selection || false
       })
       .eq('id', question.id);
 
     if (error) {
-      console.error('Error updating question:', error);
-      throw error;
+      console.error('Supabase error updating question:', error);
+      throw new Error(error.message || 'Failed to update question');
     }
 
     console.log('Question updated successfully');
     return { success: true, error: null };
   } catch (error) {
     console.error('Error in updateQuestion:', error);
-    return { success: false, error: error as Error };
+    return { success: false, error: error instanceof Error ? error : new Error(String(error)) };
   }
 };
 
@@ -618,21 +674,29 @@ export const deleteQuestion = async (questionId: string): Promise<{ success: boo
 
 export const createQuestion = async (question: GameQuestion): Promise<{ success: boolean, newQuestion: GameQuestion | null, error: Error | null }> => {
   try {
+    console.log('Creating new question:', question);
+
     const { data, error } = await supabase
       .from('questions')
       .insert({
         game_id: question.game_id,
         question_text: question.question_text,
         question_type: question.question_type,
-        multiple_choice_options: question.multiple_choice_options,
-        allow_multiple_selection: question.allow_multiple_selection
+        multiple_choice_options: question.multiple_choice_options || null,
+        allow_multiple_selection: question.allow_multiple_selection || false
       })
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error creating question:', error);
+      throw new Error(error.message || 'Failed to create question');
+    }
+
+    console.log('Question created successfully:', data);
     return { success: true, newQuestion: data, error: null };
   } catch (error) {
+    console.error('Error in createQuestion:', error);
     return { success: false, newQuestion: null, error: error instanceof Error ? error : new Error(String(error)) };
   }
 };
