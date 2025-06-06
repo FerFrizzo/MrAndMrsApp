@@ -17,7 +17,6 @@ const SignInWithGoogle: React.FC<SignInWithGoogleProps> = ({ navigation }) => {
     try {
       const { data, error } = await signInWithProvider('google');
 
-      console.log("🚀 ~ handleGoogleSignIn ~ data:", data);
       if (error) {
         throw error;
       }

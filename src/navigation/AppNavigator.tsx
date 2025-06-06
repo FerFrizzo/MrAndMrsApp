@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { ActivityIndicator, View, Text } from 'react-native';
 import { supabase } from '../config/supabaseClient';
 import { Session } from '@supabase/supabase-js';
@@ -19,22 +18,17 @@ import PasswordRecoveryScreen from '../screens/PasswordRecoveryScreen';
 import DashboardScreen from '../screens/DashboardScreen';
 import CreateGameScreen from '../screens/CreateGameScreen';
 import GameDetailsScreen from '../screens/GameDetailsScreen';
+import GameQuestionScreen from '../screens/GameQuestionScreen';
+import ReviewAnswersScreen from '../screens/ReviewAnswersScreen';
+import GameResultScreen from '../screens/GameResultScreen';
 // Uncomment these when the screens are created
 // import ProfileScreen from '../screens/ProfileScreen';
 // import PlayGameScreen from '../screens/PlayGameScreen';
 // import ResultsScreen from '../screens/ResultsScreen';
 
-// Define navigation types
-type MainTabParamList = {
-  Dashboard: undefined;
-  CreateGame: undefined;
-  Profile: undefined;
-};
-
 const Stack = createStackNavigator<RootStackParamList>();
 const AuthStack = createStackNavigator<RootStackParamList>();
 const MainStack = createStackNavigator<RootStackParamList>();
-const Tab = createBottomTabNavigator<MainTabParamList>();
 
 // Auth Navigator
 const AuthNavigator = () => (
@@ -49,96 +43,17 @@ const AuthNavigator = () => (
   </AuthStack.Navigator>
 );
 
-// Main Tab Navigator
-const MainTabNavigator = () => (
-  <Tab.Navigator
-    screenOptions={{
-      tabBarActiveTintColor: 'white',
-      tabBarInactiveTintColor: 'rgba(255, 255, 255, 0.6)',
-      headerShown: false,
-      tabBarStyle: {
-        backgroundColor: Purple,
-        borderTopWidth: 0,
-        height: 70,
-        paddingBottom: 10,
-        paddingTop: 10,
-      },
-      tabBarItemStyle: {
-        margin: 5,
-      },
-      tabBarLabelStyle: {
-        fontSize: 12,
-      }
-    }}
-  >
-    <Tab.Screen
-      name="Dashboard"
-      component={DashboardScreen}
-      options={{
-        tabBarLabel: '',
-        tabBarIcon: ({ color, size }) => (
-          <View style={{
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            backgroundColor: 'rgba(255, 255, 255, 0.8)',
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}>
-            <AntDesign name="home" size={22} color={Purple} />
-          </View>
-        ),
-      }}
-    />
-    <Tab.Screen
-      name="CreateGame"
-      component={CreateGameScreen}
-      options={{
-        tabBarLabel: '',
-        tabBarIcon: ({ color, size }) => (
-          <View style={{
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            backgroundColor: 'rgba(255, 255, 255, 0.8)',
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}>
-            <AntDesign name="pluscircleo" size={22} color={Purple} />
-          </View>
-        ),
-      }}
-    />
-    {/* Uncomment when ProfileScreen is created
-    <Tab.Screen 
-      name="Profile" 
-      component={ProfileScreen} 
-      options={{
-        tabBarLabel: '',
-        tabBarIcon: ({ color, size }) => (
-          <View style={{
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            backgroundColor: 'rgba(255, 255, 255, 0.8)',
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}>
-            <Ionicons name="person-outline" size={22} color={Purple} />
-          </View>
-        ),
-      }}
-    />
-    */}
-  </Tab.Navigator>
-);
-
-// Main App Navigator with Stack Navigator containing the Tab Navigator
+// Main App Navigator with Stack Navigator containing the screens
 const MainAppNavigator = () => (
   <MainStack.Navigator>
     <MainStack.Screen
-      name="MainTabs"
-      component={MainTabNavigator}
+      name="Dashboard"
+      component={DashboardScreen}
+      options={{ headerShown: false }}
+    />
+    <MainStack.Screen
+      name="CreateGame"
+      component={CreateGameScreen}
       options={{ headerShown: false }}
     />
     <MainStack.Screen
@@ -148,7 +63,17 @@ const MainAppNavigator = () => (
     />
     <MainStack.Screen
       name="GameQuestion"
-      component={GameDetailsScreen}
+      component={GameQuestionScreen}
+      options={{ headerShown: false }}
+    />
+    <MainStack.Screen
+      name="ReviewAnswers"
+      component={ReviewAnswersScreen}
+      options={{ headerShown: false }}
+    />
+    <MainStack.Screen
+      name="GameResult"
+      component={GameResultScreen}
       options={{ headerShown: false }}
     />
     {/* Uncomment these when the screens are created

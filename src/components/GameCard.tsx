@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../types/RootStackParamList';
 import type { GameItem } from '../types/GameData';
+import { getStatusLabel } from '../types/GameData';
 
 interface GameCardProps {
   game: GameItem;
@@ -25,7 +26,7 @@ function GameCard({ game }: GameCardProps) {
           {game.isPremium && ' • Premium'}
         </Text>
         <Text style={styles.statusText}>
-          Status: <Text style={{ color: game.colorDot }}>{game.status}</Text>
+          Status: <Text style={{ color: game.colorDot }}>{getStatusLabel(game.status)}</Text>
         </Text>
       </View>
       <View style={[styles.colorDot, { backgroundColor: game.colorDot }]} />

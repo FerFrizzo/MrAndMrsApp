@@ -31,10 +31,10 @@ if (!RESEND_API_KEY) {
 
 interface RequestBody {
   gameId: string
-  targetEmail: string
-  targetName: string
-  senderId: string
-  senderName: string
+  partnerInterviewedEmail: string
+  partnerInterviewedName: string
+  creatorId: string
+  creatorName: string
 }
 
 serve(async (req: Request) => {
@@ -44,13 +44,12 @@ serve(async (req: Request) => {
   }
 
   try {
-    console.log('Received request to send game invite')
     const body: RequestBody = await req.json()
-    console.log('Request body:', JSON.stringify(body))
-    const { gameId, targetEmail, targetName, senderId, senderName } = body
 
-    if (!gameId || !targetEmail || !senderId) {
-      console.error('Missing required fields:', { gameId, targetEmail, senderId })
+    const { gameId, partnerInterviewedEmail, partnerInterviewedName, creatorId, creatorName } = body
+
+    if (!gameId || !partnerInterviewedEmail || !creatorId) {
+      console.error('Missing required fields:', { gameId, partnerInterviewedEmail, creatorId })
       return new Response(
         JSON.stringify({ success: false, error: 'Missing required fields' }),
         {
@@ -62,8 +61,8 @@ serve(async (req: Request) => {
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(targetEmail)) {
-      console.error('Invalid email format:', targetEmail)
+    if (!emailRegex.test(partnerInterviewedEmail)) {
+      console.error('Invalid email format:', partnerInterviewedEmail)
       return new Response(
         JSON.stringify({ success: false, error: 'Invalid email format' }),
         {
@@ -73,11 +72,9 @@ serve(async (req: Request) => {
       )
     }
 
-    console.log('Initializing Supabase client')
     // Initialize Supabase client with service role key for admin privileges
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
     
-    console.log('Fetching game details')
     // Get the game details
     const { data: game, error: gameError } = await supabase
       .from('games')
@@ -95,12 +92,9 @@ serve(async (req: Request) => {
       throw new Error('Game not found')
     }
 
-    console.log('Game details:', JSON.stringify(game))
-
     // Generate a random access code if one doesn't exist
     let accessCode = game.access_code
     if (!accessCode) {
-      console.log('Generating new access code')
       accessCode = generateRandomCode(6)
       
       // Update the game with the new access code
@@ -108,7 +102,7 @@ serve(async (req: Request) => {
         .from('games')
         .update({ 
           access_code: accessCode,
-          status: 'pending'
+          status: 'ready_to_play'
         })
         .eq('id', gameId)
 
@@ -120,22 +114,21 @@ serve(async (req: Request) => {
 
     // Generate a deep link URL for the app
     const deepLink = `${APP_URL}/join?code=${accessCode}&gameId=${gameId}`
-    console.log('Generated deep link:', deepLink)
     
     // For testing, use a universal link format
     const universalLink = `https://mrandmrs.page.link?link=${encodeURIComponent(deepLink)}&apn=com.yourdomain.mrandmrs&isi=123456789&ibi=com.yourdomain.mrandmrs`
 
     // Prepare the email content
-    const emailSubject = `${senderName} invited you to play "${game.game_name}"!`
+    const emailSubject = `${creatorName} invited you to play "${game.game_name}"!`
     const emailContent = `
       <html>
         <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
           <div style="max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; border-radius: 10px;">
             <h2 style="color: #8A4FFF; text-align: center;">You've Been Invited!</h2>
             
-            <p>Hi ${targetName},</p>
+            <p>Hi ${partnerInterviewedName},</p>
             
-            <p><strong>${senderName}</strong> has invited you to play <strong>"${game.game_name}"</strong> in the Mr & Mrs App!</p>
+            <p><strong>${creatorName}</strong> has invited you to play <strong>"${game.game_name}"</strong> in the Mr & Mrs App!</p>
             
             <p>This fun game will test how well you know each other. Ready to find out?</p>
             
@@ -155,7 +148,6 @@ serve(async (req: Request) => {
       </html>
     `
 
-    console.log('Sending email via Resend API')
     // Send email using fetch to Resend API
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -165,20 +157,18 @@ serve(async (req: Request) => {
       },
       body: JSON.stringify({
         from: FROM_EMAIL,
-        to: targetEmail,
+        to: partnerInterviewedEmail,
         subject: emailSubject,
         html: emailContent,
       }),
     })
 
-    console.log('Resend API response status:', response.status)
     if (!response.ok) {
       const errorData = await response.json()
       console.error('Error from Resend API:', errorData)
       throw new Error(`Error sending email: ${errorData.message || response.statusText}`)
     }
 
-    console.log('Email sent successfully')
     // Return success response
     return new Response(
       JSON.stringify({ success: true, message: 'Invitation sent successfully' }),

@@ -1,5 +1,3 @@
-import { User } from '@supabase/supabase-js';
-
 export interface GameQuestion {
   id?: string;
   game_id?: string;
@@ -10,26 +8,47 @@ export interface GameQuestion {
   allow_multiple_selection?: boolean;
 }
 
+export interface GameQuestionWithAnswer extends GameQuestion {
+  answer?: GameAnswer;
+}
+
 export interface GameAnswer {
   id?: string;
   question_id: string;
-  creator_answer: string | null;
-  target_answer: string | null;
-  is_match?: boolean;
+  partner_interviewed_answer: string | null;
+  isCorrect?: boolean;
 }
 
 export const GAME_STATUS_MAP = {
   in_creation: 'In Creation',
   ready_to_play: 'Ready to Play',
+  playing: 'Playing',
+  answered: 'Answered',
+  results_revealed: 'Results Revealed',
   completed: 'Completed',
 } as const;
+
+export function getStatusLabel(status?: string) {
+  if (!status) return 'In Creation';
+  switch (status) {
+    case 'in_creation': return 'In Creation';
+    case 'ready_to_play': return 'Ready to Play';
+    case 'playing': return 'Playing';
+    case 'answered': return 'Answered';
+    case 'results_revealed': return 'Results Revealed';
+    case 'completed': return 'Completed';
+    default: return 'In Creation';
+  }
+}
 
 export interface GameData {
   // Basic game information
   id?: string;
   creator_id?: string;
-  target_email: string;
-  target_name: string;
+  partner_interviewed_email: string;
+  partner_interviewed_name: string;
+  partner_playing_email?: string;
+  partner_playing_name?: string;
   game_name: string;
   occasion: string;
 
@@ -47,7 +66,8 @@ export interface GameData {
   answers?: GameAnswer[];
 
   // Stats and metadata
-  target_user_id?: string | null;
+  partner_interviewed_user_id?: string | null;
+  partner_playing_user_id?: string | null;
   match_score?: number;
   total_questions?: number;
   completed?: boolean;
@@ -77,12 +97,7 @@ export interface GamesResponse {
 
 export interface GameResultsResponse {
   game: GameData | null;
-  questions: GameQuestion[];
-  stats: {
-    matchCount: number;
-    totalAnswered: number;
-    matchPercentage: number;
-  };
+  questionsWithAnswers: GameQuestion[];
   error: Error | null;
 }
 

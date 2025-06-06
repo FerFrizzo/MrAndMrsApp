@@ -25,20 +25,20 @@ type DashboardScreenProps = NativeStackScreenProps<RootStackParamList, 'Dashboar
 const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
   const { user } = useAuth();
   const [createdGames, setCreatedGames] = useState<GameItem[]>([]);
-  const [targetGames, setTargetGames] = useState<GameItem[]>([]);
+  const [partnerInterviewedGames, setPartnerInterviewedGames] = useState<GameItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchGames = async () => {
     try {
       setLoading(true);
-      const { createdGames: userCreatedGames, targetGames: userTargetGames, error } = await getUserGames();
+      const { createdGames: userCreatedGames, partnerInterviewedGames: userPartnerInterviewedGames, error } = await getUserGames();
 
       if (error) {
         console.error('Failed to fetch games:', error);
       } else {
         setCreatedGames(userCreatedGames);
-        setTargetGames(userTargetGames);
+        setPartnerInterviewedGames(userPartnerInterviewedGames);
       }
     } catch (error) {
       console.error('Error in fetchGames:', error);
@@ -88,12 +88,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
             <Text style={styles.createGameText}>Create New Game</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.signOutButton}
-            onPress={signOut}
-          >
-            <Text style={styles.signOutText}>Sign Out</Text>
-          </TouchableOpacity>
+
 
           {/* My Games Section */}
           <GamesSection
@@ -104,16 +99,23 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
             refreshing={refreshing}
           />
 
-          {/* Games I Answer Section */}
-          {targetGames.length > 0 && (
+          {/* Games I'm Interviewed In Section */}
+          {partnerInterviewedGames.length > 0 && (
             <GamesSection
-              title="Games I Answer"
-              games={targetGames}
+              title="Games I'm Interviewed In"
+              games={partnerInterviewedGames}
               emptyMessage="No games to answer yet."
               loading={loading}
               refreshing={refreshing}
             />
           )}
+
+          <TouchableOpacity
+            style={styles.signOutButton}
+            onPress={signOut}
+          >
+            <Text style={styles.signOutText}>Sign Out</Text>
+          </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
     </LinearGradient>

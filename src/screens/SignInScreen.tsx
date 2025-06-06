@@ -47,7 +47,6 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
 
       if (data?.user) {
         setUser(data.user);
-        navigation.navigate('MainTabs');
       } else {
         throw new Error('No user data returned');
       }

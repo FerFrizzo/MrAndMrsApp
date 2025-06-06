@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -18,7 +18,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/RootStackParamList';
 import { Purple, PurpleLight } from '../utils/Colors';
 import { createGame, sendGameInvite } from '../services/gameService';
-import { GameQuestion } from '../types/GameData';
+import { GAME_STATUS_MAP, GameQuestion } from '../types/GameData';
 import MultipleChoiceEditor from '../components/MultipleChoiceEditor';
 import { Picker } from '@react-native-picker/picker';
 import { useToast } from '../contexts/ToastContext';
@@ -31,8 +31,10 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
 
   // Game details
   const [gameName, setGameName] = useState('');
-  const [targetEmail, setTargetEmail] = useState('');
-  const [targetName, setTargetName] = useState('');
+  const [partnerInterviewedEmail, setPartnerInterviewedEmail] = useState('');
+  const [partnerInterviewedName, setPartnerInterviewedName] = useState('');
+  const [partnerPlayingEmail, setPartnerPlayingEmail] = useState('');
+  const [partnerPlayingName, setPartnerPlayingName] = useState('');
   const [occasion, setOccasion] = useState('');
 
   // Questions
@@ -51,6 +53,19 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
   const [isPremium, setIsPremium] = useState(false);
 
   const { showToast, showDialog } = useToast();
+
+  // Hide tab bar when this screen is active
+  useLayoutEffect(() => {
+    const parent = navigation.getParent && navigation.getParent();
+    if (parent) {
+      parent.setOptions({ tabBarStyle: { display: 'none' } });
+    }
+    return () => {
+      if (parent) {
+        parent.setOptions({ tabBarStyle: undefined });
+      }
+    };
+  }, [navigation]);
 
   const addQuestion = () => {
     setQuestions([...questions, {
@@ -103,8 +118,18 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
 
   const validateStep = (currentStep: number): boolean => {
     if (currentStep === 1) {
-      if (!gameName || !targetEmail || !targetName) {
-        showToast('Please fill in game name, target name and email', 'error');
+      if (!gameName || !partnerInterviewedEmail || !partnerInterviewedName) {
+        showToast('Please fill in game name, partner interviewed name and email', 'error');
+        return false;
+      }
+      // Email validation: at least 3 letters, contains @ and .
+      const emailRegex = /^[^@\s]{3,}[^\s]*@[^\s]+\.[^\s]+$/;
+      if (!emailRegex.test(partnerInterviewedEmail)) {
+        showToast('Please enter a valid email for Partner Interviewed', 'error');
+        return false;
+      }
+      if (partnerPlayingEmail && !emailRegex.test(partnerPlayingEmail)) {
+        showToast('Please enter a valid email for Partner Playing', 'error');
         return false;
       }
     } else if (currentStep === 2) {
@@ -144,8 +169,8 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
       return;
     }
 
-    if (!gameName.trim() || !targetEmail.trim() || !targetName.trim()) {
-      showToast('Please fill in game name, target name and email', 'error');
+    if (!gameName.trim() || !partnerInterviewedEmail.trim() || !partnerInterviewedName.trim()) {
+      showToast('Please fill in game name, partner interviewed name and email', 'error');
       return;
     }
 
@@ -182,21 +207,23 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
               setLoading(true);
               const gameData = {
                 game_name: gameName.trim(),
-                target_email: targetEmail.trim(),
-                target_name: targetName.trim(),
+                partner_interviewed_email: partnerInterviewedEmail.trim(),
+                partner_interviewed_name: partnerInterviewedName.trim(),
+                partner_playing_email: partnerPlayingEmail.trim(),
+                partner_playing_name: partnerPlayingName.trim(),
                 occasion,
                 questions,
+                status: "in_creation" as keyof typeof GAME_STATUS_MAP,
                 is_premium: isPremium,
               };
 
-              console.log('gameData', gameData);
               const { game, error } = await createGame(gameData);
 
               if (error) throw error;
 
               // Send invitation email
               if (game?.id) {
-                const { success: inviteSuccess, error: inviteError } = await sendGameInvite(game.id, targetEmail);
+                const { success: inviteSuccess, error: inviteError } = await sendGameInvite(game.id, partnerInterviewedEmail);
 
                 if (inviteError) {
                   showToast('Game created, but failed to send invitation: ' + inviteError.message, 'warning');
@@ -206,8 +233,9 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
                       message: `Join me for a game of "Mr & Mrs"! I've sent an invite to your email. Download the app and find out how well you know your partner!`,
                       title: `${gameName} Invitation`,
                     });
+                    navigation.navigate('Dashboard');
                   } catch (shareError) {
-                    console.log('Share error:', shareError);
+                    console.error('Share error:', shareError);
                   }
                   showToast('Game created and invitation sent successfully!', 'success');
                 }
@@ -215,7 +243,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
                 showToast('Game created successfully!', 'success');
               }
 
-              navigation.replace('GameQuestion', { gameId: game?.id || '' });
+              navigation.navigate('Dashboard');
             } catch (error: any) {
               showToast(error.message || 'Failed to create game', 'error');
             } finally {
@@ -239,27 +267,47 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
             <Text style={styles.label}>Game Name</Text>
             <TextInput
               style={styles.input}
-              placeholder=""
+              placeholder="Enter game name"
               placeholderTextColor="#A0A0A0"
               value={gameName}
               onChangeText={setGameName}
             />
 
-            <Text style={styles.label}>Target's Name</Text>
+            <Text style={styles.label}>Partner Interviewed Name</Text>
             <TextInput
               style={styles.input}
-              value={targetName}
-              onChangeText={setTargetName}
-              placeholder="Enter target's name"
+              value={partnerInterviewedName}
+              onChangeText={setPartnerInterviewedName}
+              placeholder="Enter partner interviewed's name"
               placeholderTextColor="#999"
             />
 
-            <Text style={styles.label}>Target's Email</Text>
+            <Text style={styles.label}>Partner Interviewed Email</Text>
             <TextInput
               style={styles.input}
-              value={targetEmail}
-              onChangeText={setTargetEmail}
-              placeholder="Enter target's email"
+              value={partnerInterviewedEmail}
+              onChangeText={setPartnerInterviewedEmail}
+              placeholder="Enter partner interviewed's email"
+              placeholderTextColor="#999"
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+
+            <Text style={styles.label}>Partner Playing Name</Text>
+            <TextInput
+              style={styles.input}
+              value={partnerPlayingName}
+              onChangeText={setPartnerPlayingName}
+              placeholder="Enter partner playing's name"
+              placeholderTextColor="#999"
+            />
+
+            <Text style={styles.label}>Partner Playing Email (optional)</Text>
+            <TextInput
+              style={styles.input}
+              value={partnerPlayingEmail}
+              onChangeText={setPartnerPlayingEmail}
+              placeholder="Enter partner playing's email (optional)"
               placeholderTextColor="#999"
               keyboardType="email-address"
               autoCapitalize="none"
@@ -432,7 +480,8 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
             <View style={styles.summaryContainer}>
               <Text style={styles.summaryTitle}>Summary</Text>
               <Text style={styles.summaryItem}>Game: {gameName}</Text>
-              <Text style={styles.summaryItem}>For: {targetEmail}</Text>
+              <Text style={styles.summaryItem}>Partner Interviewed: {partnerInterviewedEmail}</Text>
+              <Text style={styles.summaryItem}>Partner Playing: {partnerPlayingEmail}</Text>
               <Text style={styles.summaryItem}>Questions: {questions.length}</Text>
               <Text style={styles.summaryItem}>Type: {isPremium ? 'Premium' : 'Basic'}</Text>
               <Text style={styles.summaryItem}>
@@ -482,7 +531,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
       >
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { flexGrow: 1, justifyContent: 'center', minHeight: '100%' }]}
           showsVerticalScrollIndicator={true}
           keyboardShouldPersistTaps="handled"
         >
@@ -544,21 +593,26 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+    justifyContent: 'center',
     paddingBottom: 20,
+    minHeight: '100%',
   },
   stepContainer: {
     padding: 10,
-    paddingTop: 0,
     width: '100%',
     maxWidth: 400,
     alignSelf: 'center',
     flexGrow: 1,
+    justifyContent: 'center',
+    flex: 1,
   },
   stepTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: 'white',
+    marginTop: 32,
     marginBottom: 16,
+    alignSelf: 'center',
   },
   stepDescription: {
     fontSize: 14,
@@ -582,7 +636,7 @@ const styles = StyleSheet.create({
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 24,
+    marginTop: 10,
     gap: 10,
   },
   backButton: {

@@ -16,7 +16,7 @@ import { RootStackParamList } from '../types/RootStackParamList';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Purple, PurpleLight, getStatusColor } from '../utils/Colors';
 import { getGameWithQuestions, sendGameInvite, updateQuestion, deleteQuestion, createQuestion, updateGame } from '../services/gameService';
-import { GameData, GameQuestion, GAME_STATUS_MAP } from '../types/GameData';
+import { GameData, GameQuestion, GAME_STATUS_MAP, getStatusLabel } from '../types/GameData';
 import { AntDesign, MaterialCommunityIcons, Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import MultipleChoiceEditor from '../components/MultipleChoiceEditor';
 import { useToast } from '../contexts/ToastContext';
@@ -43,7 +43,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
   const [status, setStatus] = useState<keyof typeof GAME_STATUS_MAP>('in_creation');
   const [targetStarted, setTargetStarted] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   useEffect(() => {
     fetchGameDetails();
   }, [gameId]);
@@ -52,13 +52,15 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
     if (game) {
       setStatus(game.status || 'in_creation');
       // If the game is completed, the target has started/finished
-      setTargetStarted(game.status === 'completed');
+      //todo: check if this is accurate
+      setTargetStarted(game.status === 'playing');
     }
   }, [game]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setCurrentUserId(data?.user?.id ?? null);
+      setCurrentUserEmail(data?.user?.email ?? null);
     });
   }, []);
 
@@ -179,7 +181,6 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
           allow_multiple_selection: questionType === 'multiple_choice' ? allowsMultipleSelection : false
         };
 
-        console.log('Creating new question:', newQuestion);
         const { success, newQuestion: createdQuestion, error } = await createQuestion(newQuestion);
 
         if (error) {
@@ -214,7 +215,6 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
         };
 
         if (updatedQuestion.id) {
-          console.log('Updating question:', updatedQuestion);
           const { success, error } = await updateQuestion(updatedQuestion);
 
           if (error) {
@@ -258,7 +258,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
     }
 
     if (game.status !== 'ready_to_play') {
-      showToast(`This game needs to be set to Ready to Play so an invite can be sent to ${game.target_name}`, 'warning')
+      showToast(`This game needs to be set to Ready to Play so an invite can be sent to ${game.partner_interviewed_name}`, 'warning')
       return;
     }
 
@@ -277,7 +277,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
           onPress: async () => {
             try {
               setSendingInvite(true);
-              const { success, error } = await sendGameInvite(gameId, game.target_email);
+              const { success, error } = await sendGameInvite(gameId, game.partner_interviewed_email);
 
               if (error) throw error;
 
@@ -288,10 +288,10 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
                     title: `${game.game_name} Invitation`,
                   });
                 } catch (shareError) {
-                  console.log('Share error:', shareError);
+                  console.error('Share error:', shareError);
                 }
 
-                showToast(`An invitation has been sent to ${game.target_email} with a special link to access this game.`, 'success');
+                showToast(`An invitation has been sent to ${game.partner_interviewed_email} with a special link to access this game.`, 'success');
               }
             } catch (error: any) {
               showToast(error.message || 'Failed to send invitation', 'error');
@@ -305,32 +305,13 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
     );
   };
 
-  const handleStatusChange = async (newStatus: keyof typeof GAME_STATUS_MAP) => {
-    if (!game) return;
-    if (newStatus === status) return;
-    try {
-      setLoading(true);
-      // Update game status
-      const { error } = await updateGame(game.id!, { status: newStatus });
-      if (error) throw error;
-      setStatus(newStatus);
-      setGame({ ...game, status: newStatus });
-      if (newStatus === 'ready_to_play') {
-        // Send invite when moving to ready_to_play
-        await handleSendInvite();
-      }
-      showToast(`Game status updated to ${GAME_STATUS_MAP[newStatus]}`, 'success');
-    } catch (error: any) {
-      showToast(error.message || 'Failed to update game status', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
+
 
   if (loading) {
     return (
@@ -496,7 +477,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => navigation.navigate('MainTabs')}
+            onPress={() => navigation.navigate('Dashboard')}
           >
             <AntDesign name="arrowleft" size={24} color="white" />
           </TouchableOpacity>
@@ -520,16 +501,16 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
               <View style={styles.titleRow}>
                 <Text style={styles.gameTitle}>{game.game_name}</Text>
                 <View style={[styles.statusBadge, { backgroundColor: getStatusColor(game.status) }]}>
-                  <Text style={styles.statusText}>{game.status || 'Created'}</Text>
+                  <Text style={styles.statusText}>{getStatusLabel(game.status)}</Text>
                 </View>
               </View>
 
               <View style={styles.infoCard}>
                 <View style={styles.infoRow}>
                   <Ionicons name="person-outline" size={20} color={Purple} />
-                  <Text style={styles.infoLabel}>Target:</Text>
+                  <Text style={styles.infoLabel}>Partner Interviewed:</Text>
                   <View style={styles.targetInfo}>
-                    <Text style={styles.infoValue}>{game.target_name}</Text>
+                    <Text style={styles.infoValue}>{game.partner_interviewed_name}</Text>
                   </View>
                 </View>
 
@@ -553,124 +534,131 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
                   <Text style={styles.infoValue}>{game.is_premium ? 'Premium' : 'Basic'}</Text>
                 </View>
 
-              </View>
-
-              <TouchableOpacity
-                style={styles.inviteButton}
-                onPress={handleSendInvite}
-                disabled={sendingInvite}
-              >
-                {sendingInvite ? (
-                  <ActivityIndicator size="small" color="white" />
-                ) : (
-                  <>
-                    <MaterialIcons name="email" size={20} color="white" style={styles.inviteIcon} />
-                    <Text style={styles.inviteButtonText}>Send Invitation to {game.target_name}</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-
-              <View style={styles.questionsSection}>
-                <Text style={styles.sectionTitle}>Questions ({questions.length})</Text>
-                {questions.map((question, index) => (
-                  <View key={index} style={styles.questionCard}>
-                    <View style={styles.questionActions}>
-                      <Text style={styles.questionNumber}>Question {index + 1}</Text>
-                      <View style={styles.actionButtons}>
-                        <TouchableOpacity
-                          style={styles.actionButton}
-                          onPress={() => handleEditQuestion(question, index)}
-                        >
-                          <Feather name="edit" size={16} color={Purple} />
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={styles.actionButton}
-                          onPress={() => handleDeleteQuestion(index)}
-                        >
-                          <Feather name="trash-2" size={16} color="#FF3B30" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                    <Text style={styles.questionText}>{question.question_text}</Text>
-                    <View style={styles.questionFooter}>
-                      <Text style={styles.questionType}>Type: {
-                        question.question_type === 'multiple_choice' ? 'Multiple Choice' :
-                          question.question_type === 'text' ? 'Text Response' :
-                            question.question_type === 'true_false' ? 'True/False' :
-                              question.question_type
-                      }</Text>
-                      {question.question_type === 'multiple_choice' &&
-                        question.allow_multiple_selection && (
-                          <Text style={styles.multipleAnswersLabel}>Multiple answers allowed</Text>
-                        )}
-                    </View>
-
-                    {question.question_type === 'multiple_choice' && question.multiple_choice_options && question.multiple_choice_options.length > 0 && (
-                      <View style={styles.optionsContainer}>
-                        {question.multiple_choice_options.map((option, optionIndex) => (
-                          <View key={optionIndex} style={styles.optionItem}>
-                            <View style={styles.optionBullet} />
-                            <Text style={styles.optionText}>{option}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    )}
+                <View style={styles.infoRow}>
+                  <Ionicons name="person-outline" size={20} color={Purple} />
+                  <Text style={styles.infoLabel}>Partner Playing:</Text>
+                  <View style={styles.targetInfo}>
+                    <Text style={styles.infoValue}>{game.partner_playing_name}</Text>
                   </View>
-                ))}
+                </View>
 
-                <TouchableOpacity
-                  style={styles.addQuestionButton}
-                  onPress={handleAddQuestion}
-                >
-                  <AntDesign name="plus" size={18} color="white" />
-                  <Text style={styles.addQuestionButtonText}>Add Question</Text>
-                </TouchableOpacity>
               </View>
+
+              {game.partner_interviewed_email !== currentUserEmail && (
+                <View style={styles.questionsSection}>
+                  <Text style={styles.sectionTitle}>Questions ({questions.length})</Text>
+                  {questions.map((question, index) => (
+                    <View key={index} style={styles.questionCard}>
+                      <View style={styles.questionActions}>
+                        <Text style={styles.questionNumber}>Question {index + 1}</Text>
+                        <View style={styles.actionButtons}>
+                          {!["answered", "results_revealed", "completed"].includes((game.status as string)) && (
+                            <>
+                              <TouchableOpacity
+                                style={styles.actionButton}
+                                onPress={() => handleEditQuestion(question, index)}
+                              >
+                                <Feather name="edit" size={16} color={Purple} />
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                style={styles.actionButton}
+                                onPress={() => handleDeleteQuestion(index)}
+                              >
+                                <Feather name="trash-2" size={16} color="#FF3B30" />
+                              </TouchableOpacity>
+                            </>
+                          )}
+                        </View>
+                      </View>
+                      <Text style={styles.questionText}>{question.question_text}</Text>
+                      <View style={styles.questionFooter}>
+                        <Text style={styles.questionType}>Type: {
+                          question.question_type === 'multiple_choice' ? 'Multiple Choice' :
+                            question.question_type === 'text' ? 'Text Response' :
+                              question.question_type === 'true_false' ? 'True/False' :
+                                question.question_type
+                        }</Text>
+                        {question.question_type === 'multiple_choice' &&
+                          question.allow_multiple_selection && (
+                            <Text style={styles.multipleAnswersLabel}>Multiple answers allowed</Text>
+                          )}
+                      </View>
+
+                      {question.question_type === 'multiple_choice' && question.multiple_choice_options && question.multiple_choice_options.length > 0 && (
+                        <View style={styles.optionsContainer}>
+                          {question.multiple_choice_options.map((option, optionIndex) => (
+                            <View key={optionIndex} style={styles.optionItem}>
+                              <View style={styles.optionBullet} />
+                              <Text style={styles.optionText}>{option}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                  {(game.status === 'in_creation') && (
+                    <TouchableOpacity
+                      style={styles.addQuestionButton}
+                      onPress={handleAddQuestion}
+                    >
+                      <AntDesign name="plus" size={18} color="white" />
+                      <Text style={styles.addQuestionButtonText}>Add Question</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
             </View>
           )}
         </ScrollView>
 
         <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={styles.playButton}
-            onPress={() => navigation.navigate('GameQuestion', { gameId })}
-          >
-            <Text style={styles.playButtonText}>Play Game</Text>
-          </TouchableOpacity>
+          {game &&
+            game.status !== 'completed' &&
+            !targetStarted &&
+            currentUserId && (
+              game.creator_id === currentUserId ? (
+                game.status === 'answered' ? (
+                  <TouchableOpacity
+                    style={styles.playButton}
+                    onPress={() => navigation.navigate('ReviewAnswers', { gameId })}
+                    accessibilityRole="button"
+                    accessibilityLabel="View answers for this game"
+                  >
+                    <Text style={styles.playButtonText}>View Answers</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.playButton}
+                    onPress={handleSendInvite}
+                    disabled={sendingInvite}
+                  >
+                    {sendingInvite ? (
+                      <ActivityIndicator color="white" />
+                    ) : (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                        <MaterialIcons name="email" size={20} color="white" style={styles.inviteIcon} />
+                        <Text style={styles.playButtonText}>Send Invite to {game.partner_interviewed_name}</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                )
+              ) : (game.partner_interviewed_email === currentUserEmail && game.status !== 'in_creation') ? (
+                <TouchableOpacity
+                  style={styles.playButton}
+                  onPress={async () => {
+                    if (game && game.status !== 'playing') {
+                      await updateGame(game.id!, { status: 'playing' });
+                    }
+                    navigation.navigate('GameQuestion', { gameId });
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Start answering game questions"
+                >
+                  <Text style={styles.playButtonText}>Play Game</Text>
+                </TouchableOpacity>
+              ) : null
+            )}
         </View>
-
-        {/* Status Switcher for Creator */}
-        {game && currentUserId && game.creator_id === currentUserId && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', margin: 16 }}>
-            <Text style={{ fontWeight: 'bold', marginRight: 8 }}>Status:</Text>
-            <TouchableOpacity
-              style={{
-                backgroundColor: status === 'in_creation' ? Purple : '#eee',
-                padding: 8,
-                borderRadius: 8,
-                marginRight: 8,
-              }}
-              disabled={status === 'in_creation' || (status === 'ready_to_play' && targetStarted)}
-              onPress={() => handleStatusChange('in_creation')}
-            >
-              <Text style={{ color: status === 'in_creation' ? 'white' : '#333' }}>In Creation</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={{
-                backgroundColor: status === 'ready_to_play' ? Purple : '#eee',
-                padding: 8,
-                borderRadius: 8,
-              }}
-              disabled={status === 'ready_to_play' && targetStarted}
-              onPress={() => handleStatusChange('ready_to_play')}
-            >
-              <Text style={{ color: status === 'ready_to_play' ? 'white' : '#333' }}>Ready to Play</Text>
-            </TouchableOpacity>
-            <View style={{ marginLeft: 8 }}>
-              <Text style={{ color: '#888' }}>{GAME_STATUS_MAP[status]}</Text>
-            </View>
-          </View>
-        )}
       </SafeAreaView>
 
       {renderQuestionModal()}
@@ -761,7 +749,7 @@ const styles = StyleSheet.create({
     color: '#333',
     marginLeft: 10,
     marginRight: 8,
-    width: 80,
+    width: 160,
   },
   infoValue: {
     fontSize: 16,
