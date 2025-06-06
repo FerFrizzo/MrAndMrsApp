@@ -1,74 +1,64 @@
-# OSX
-#
+# === General ===
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.env
+.env.*
+
+# === macOS ===
 .DS_Store
 
-# Xcode
-#
-build/
-*.pbxuser
-!default.pbxuser
-*.mode1v3
-!default.mode1v3
-*.mode2v3
-!default.mode2v3
-*.perspectivev3
-!default.perspectivev3
-xcuserdata
-*.xccheckout
-*.moved-aside
-DerivedData
-*.hmap
-*.ipa
-*.xcuserstate
-ios/.xcode.env.local
+# === React Native ===
+/ios/Pods/
+/ios/build/
+/ios/DerivedData/
+/android/.gradle/
+/android/app/build/
+/android/build/
+/android/local.properties
 
-# Android/IntelliJ
-#
-build/
-.idea
+# Firebase config
+google-services.json
+GoogleService-Info.plist
+
+# Android keystore
+android/app/*.keystore
+
+# === Keystore (Sensitive) ===
+android/app/*.keystore
+android/keystores/
+*.jks
+
+# === Gradle & Java ===
 .gradle
-local.properties
 *.iml
 *.hprof
-.cxx/
-*.keystore
-!debug.keystore
+build/
+captures/
+.externalNativeBuild
 
-# node.js
-#
-node_modules/
-npm-debug.log
-yarn-error.log
+# === Xcode ===
+*.xcworkspace
+*.xcodeproj/project.xcworkspace
+*.xcuserstate
+*.xcuserdata
+ios/*.xcodeproj/*
+ios/*.xcworkspace/*
+ios/Podfile.lock
 
-# fastlane
-#
-*/fastlane/report.xml
-*/fastlane/Preview.html
-*/fastlane/screenshots
+# === Misc ===
+/tmp
+*.swp
+*~.nib
+.idea/
+.vscode/
+*.log
 
-# Bundle artifact
-*.jsbundle
+# === Fastlane (if used) ===
+fastlane/report.xml
+fastlane/screenshots/**/*.png
+fastlane/test_output
 
-# Ruby / CocoaPods
-/ios/Pods/
-/vendor/bundle/
-
-# Temporary files created by Metro to check the health of the file watcher
-.metro-health-check*
-
-# testing
-/coverage
-
-# Environment variables
-.env
-.env.local
-.env.development
-.env.test
-.env.production
-
-#Google files
-google-services.json
-GoogleService-info.plist
-
-# Supabase Edge Functions
-supabase/functions/*/.env
+# === Signing Configs (Never commit passwords) ===
+android/gradle.properties
