@@ -17,6 +17,7 @@ yarn-error.log*
 /android/app/build/
 /android/build/
 /android/local.properties
+/android/gradle.properties
 
 # Firebase config
 google-services.json
@@ -61,4 +62,6 @@ fastlane/screenshots/**/*.png
 fastlane/test_output
 
 # === Signing Configs (Never commit passwords) ===
+android/gradle.properties
+android/my-key.keystore
 android/gradle.properties

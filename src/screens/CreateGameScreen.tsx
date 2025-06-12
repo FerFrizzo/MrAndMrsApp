@@ -22,6 +22,7 @@ import { GAME_STATUS_MAP, GameQuestion } from '../types/GameData';
 import MultipleChoiceEditor from '../components/MultipleChoiceEditor';
 import { Picker } from '@react-native-picker/picker';
 import { useToast } from '../contexts/ToastContext';
+import { openPaymentSheet } from '../services/paymentService';
 
 type CreateGameScreenProps = NativeStackScreenProps<RootStackParamList, 'CreateGame'>;
 
@@ -192,19 +193,17 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
 
     showDialog(
       'Create Game',
-      'Are you ready to create this game and send an invitation?',
+      'Creating a game costs $2.99. Do you want to proceed to payment?',
       [
+        { text: 'Cancel', style: 'cancel', onPress: () => { } },
         {
-          text: 'Cancel',
-          style: 'cancel',
-          onPress: () => { }
-        },
-        {
-          text: 'Create',
+          text: 'Pay & Create',
           style: 'default',
           onPress: async () => {
             try {
               setLoading(true);
+              // await openPaymentSheet();
+              // Only create the game if payment succeeds
               const gameData = {
                 game_name: gameName.trim(),
                 partner_interviewed_email: partnerInterviewedEmail.trim(),
@@ -245,7 +244,8 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
 
               navigation.navigate('Dashboard');
             } catch (error: any) {
-              showToast(error.message || 'Failed to create game', 'error');
+              console.error('Error:', error);
+              showToast(error.message || 'Payment failed or game creation failed', 'error');
             } finally {
               setLoading(false);
             }
@@ -458,7 +458,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
             <Text style={styles.stepTitle}>Game Settings</Text>
 
             <View style={styles.optionContainer}>
-              <Text style={styles.optionLabel}>Premium Game</Text>
+              {/* <Text style={styles.optionLabel}>Premium Game</Text>
               <TouchableOpacity
                 style={[
                   styles.toggle,
@@ -470,12 +470,12 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
                   styles.toggleHandle,
                   isPremium ? styles.toggleHandleActive : {}
                 ]} />
-              </TouchableOpacity>
+              </TouchableOpacity> */}
             </View>
 
-            <Text style={styles.premiumNote}>
+            {/* <Text style={styles.premiumNote}>
               Premium games cost $4.99 and include additional features
-            </Text>
+            </Text> */}
 
             <View style={styles.summaryContainer}>
               <Text style={styles.summaryTitle}>Summary</Text>

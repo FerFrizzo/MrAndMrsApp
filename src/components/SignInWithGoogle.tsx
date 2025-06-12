@@ -21,8 +21,6 @@ const SignInWithGoogle: React.FC<SignInWithGoogleProps> = ({ navigation }) => {
         throw error;
       }
 
-      // The OAuth flow will redirect the user, so we don't need to manually set the user
-      // Supabase will handle the session and the auth state listener in AuthContext will update the user
     } catch (error: any) {
       console.error("Error signing in with Google:", error);
       Alert.alert('Sign In Failed', error.message || 'Failed to sign in with Google');
