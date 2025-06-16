@@ -69,6 +69,7 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 90}
           style={styles.innerContainer}
         >
           <View style={styles.contentContainer}>
@@ -130,7 +131,7 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
                 </Text>
               </TouchableOpacity>
 
-              <View style={styles.separatorContainer}>
+              {/* <View style={styles.separatorContainer}>
                 <View style={styles.separatorLine} />
                 <Text style={styles.orText}>Or sign in with</Text>
                 <View style={styles.separatorLine} />
@@ -146,7 +147,7 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
                 <TouchableOpacity style={styles.socialButton}>
                   <AntDesign name="apple1" size={24} color="black" />
                 </TouchableOpacity>
-              </View>
+              </View> */}
             </View>
           </View>
         </KeyboardAvoidingView>
@@ -160,8 +161,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   innerContainer: {
-    flex: 1,
-    padding: 20,
+    flex: 1
   },
   contentContainer: {
     flex: 1,

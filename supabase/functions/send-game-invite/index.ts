@@ -35,6 +35,7 @@ interface RequestBody {
   partnerInterviewedName: string
   creatorId: string
   creatorName: string
+  platform?: string
 }
 
 serve(async (req: Request) => {
@@ -46,7 +47,7 @@ serve(async (req: Request) => {
   try {
     const body: RequestBody = await req.json()
 
-    const { gameId, partnerInterviewedEmail, partnerInterviewedName, creatorId, creatorName } = body
+    const { gameId, partnerInterviewedEmail, partnerInterviewedName, creatorId, creatorName, platform } = body
 
     if (!gameId || !partnerInterviewedEmail || !creatorId) {
       console.error('Missing required fields:', { gameId, partnerInterviewedEmail, creatorId })
@@ -112,11 +113,17 @@ serve(async (req: Request) => {
       }
     }
 
-    // Generate a deep link URL for the app
+    // Generate a deepp link URL for the ap
     const deepLink = `${APP_URL}/join?code=${accessCode}&gameId=${gameId}`
     
     // For testing, use a universal link format
-    const universalLink = `https://mrandmrs.page.link?link=${encodeURIComponent(deepLink)}&apn=com.yourdomain.mrandmrs&isi=123456789&ibi=com.yourdomain.mrandmrs`
+    
+    let universalLink 
+    if (!platform || platform === 'android') {
+      universalLink = `https://play.google.com/store/apps/details?id=com.ferfrizzo.MrAndMrsApp` 
+    } else {
+      universalLink = `https://apps.apple.com/us/app/id123456789`
+    }
 
     // Prepare the email content
     const emailSubject = `${creatorName} invited you to play "${game.game_name}"!`
@@ -138,7 +145,7 @@ serve(async (req: Request) => {
             
             <p style="font-size: 14px; color: #666;">If the button doesn't work, you can also open the app and enter this code: <strong>${accessCode}</strong></p>
             
-            <p style="font-size: 14px; color: #666;">Don't have the app yet? Download it from the <a href="https://play.google.com/store/apps/details?id=com.yourdomain.mrandmrs">Google Play Store</a> or <a href="https://apps.apple.com/us/app/id123456789">Apple App Store</a>.</p>
+            <p style="font-size: 14px; color: #666;">Don't have the app yet? Download it from the <a href="https://play.google.com/store/apps/details?id=com.ferfrizzo.MrAndMrsApp">Google Play Store</a>.</p>
             
             <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #999; text-align: center;">
               <p>This is an automated email. Please do not reply.</p>

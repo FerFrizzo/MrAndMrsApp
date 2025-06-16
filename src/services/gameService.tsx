@@ -12,6 +12,7 @@ import {
   GameItem,
   GameAnswer
 } from "../types/GameData"
+import { Platform } from "react-native"
 
 // Create a new game
 export const createGame = async (gameData: GameData): Promise<GameResponse> => {
@@ -419,7 +420,8 @@ export const sendGameInvite = async (gameId: string, partnerInterviewedEmail: st
         partnerInterviewedEmail,
         partnerInterviewedName: game.partner_interviewed_name,
         creatorId: user.id,
-        creatorName: user.user_metadata?.full_name || user.email || 'A friend'
+        creatorName: user.user_metadata?.full_name || user.email || 'A friend',
+        platform: Platform.OS
       },
     });
 

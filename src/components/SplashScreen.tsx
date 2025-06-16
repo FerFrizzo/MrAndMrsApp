@@ -1,4 +1,5 @@
-import { StyleSheet, View, Text, Image } from 'react-native';
+import React from 'react';
+import { StyleSheet, View, Text, Image, StatusBar } from 'react-native';
 
 import Animated, {
   useAnimatedStyle,
@@ -40,31 +41,35 @@ export function SplashScreen({ onAnimationComplete }: SplashScreenProps) {
   }, []);
 
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={[Purple, PurpleLight]}
-        style={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          top: 0,
-          bottom: 0,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-        start={{ x: 0, y: 1 }}
-        end={{ x: 1, y: 0 }}
-      >
-        <Animated.View style={[styles.logoContainer, animatedStyles]}>
-          <Image
-            source={require('../../assets/logo.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        </Animated.View>
-        <Text style={styles.title}>How well do you really know each other?</Text>
-      </LinearGradient>
-    </View>
+    <>
+      <StatusBar backgroundColor="#8A2BE2" translucent={false} />
+      <View style={styles.container}>
+        <LinearGradient
+          colors={[Purple, PurpleLight]}
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: 0,
+            bottom: 0,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          start={{ x: 0, y: 1 }}
+          end={{ x: 1, y: 0 }}
+        >
+          <Animated.View style={[styles.logoContainer, animatedStyles]}>
+            <Image
+              source={require('../../assets/logo.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </Animated.View>
+          <Text style={styles.title}>How well do you really know each other?</Text>
+        </LinearGradient>
+      </View>
+    </>
+
   );
 }
 

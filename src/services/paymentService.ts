@@ -20,6 +20,12 @@ export async function openPaymentSheet() {
     customerEphemeralKeySecret: ephemeralKey,
     paymentIntentClientSecret: paymentIntent,
     allowsDelayedPaymentMethods: false,
+    style: 'automatic',
+    googlePay: {
+      merchantCountryCode: 'US',
+      currencyCode: 'USD',
+      testEnv: false
+    }
   });
   if (initError) throw new Error(initError.message);
 

@@ -202,7 +202,8 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
           onPress: async () => {
             try {
               setLoading(true);
-              // await openPaymentSheet();
+              await openPaymentSheet();
+
               // Only create the game if payment succeeds
               const gameData = {
                 game_name: gameName.trim(),
@@ -342,96 +343,104 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
 
       case 2:
         return (
-          <View style={styles.stepContainer}>
+          <View style={[styles.stepContainer, { flex: 1 }]}>
             <Text style={styles.stepTitle}>Questions</Text>
             <Text style={styles.stepDescription}>
-              Add questions for the game target to answer
+              Add questions {partnerInterviewedName} should answer before the game
             </Text>
 
-            {questions.map((question, index) => (
-              <View key={index} style={styles.questionContainer}>
-                <TextInput
-                  style={styles.questionInput}
-                  placeholder={`Question ${index + 1}`}
-                  placeholderTextColor="#A0A0A0"
-                  value={question.question_text}
-                  onChangeText={(text) => updateQuestion(index, text)}
-                  multiline
-                />
+            <View style={{ flex: 1 }}>
+              <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={{ paddingBottom: 16 }}
+                keyboardShouldPersistTaps="handled"
+              >
+                {questions.map((question, index) => (
+                  <View key={index} style={styles.questionContainer}>
+                    <TextInput
+                      style={styles.questionInput}
+                      placeholder={`Question ${index + 1}`}
+                      placeholderTextColor="#A0A0A0"
+                      value={question.question_text}
+                      onChangeText={(text) => updateQuestion(index, text)}
+                      multiline
+                    />
 
-                <View style={styles.questionTypeContainer}>
-                  <Text style={styles.questionTypeLabel}>Question Type:</Text>
-                  <View style={styles.typeButtonsContainer}>
-                    <TouchableOpacity
-                      style={[
-                        styles.typeButton,
-                        question.question_type === 'text' && styles.typeButtonActive
-                      ]}
-                      onPress={() => updateQuestionType(index, 'text')}
-                    >
-                      <Text style={[
-                        styles.typeButtonText,
-                        question.question_type === 'text' && styles.typeButtonTextActive
-                      ]}>
-                        Text
-                      </Text>
-                    </TouchableOpacity>
+                    <View style={styles.questionTypeContainer}>
+                      <Text style={styles.questionTypeLabel}>Question Type:</Text>
+                      <View style={styles.typeButtonsContainer}>
+                        <TouchableOpacity
+                          style={[
+                            styles.typeButton,
+                            question.question_type === 'text' && styles.typeButtonActive
+                          ]}
+                          onPress={() => updateQuestionType(index, 'text')}
+                        >
+                          <Text style={[
+                            styles.typeButtonText,
+                            question.question_type === 'text' && styles.typeButtonTextActive
+                          ]}>
+                            Text
+                          </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={[
+                            styles.typeButton,
+                            question.question_type === 'multiple_choice' && styles.typeButtonActive
+                          ]}
+                          onPress={() => updateQuestionType(index, 'multiple_choice')}
+                        >
+                          <Text style={[
+                            styles.typeButtonText,
+                            question.question_type === 'multiple_choice' && styles.typeButtonTextActive
+                          ]}>
+                            Multiple Choice
+                          </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={[
+                            styles.typeButton,
+                            question.question_type === 'true_false' && styles.typeButtonActive
+                          ]}
+                          onPress={() => updateQuestionType(index, 'true_false')}
+                        >
+                          <Text style={[
+                            styles.typeButtonText,
+                            question.question_type === 'true_false' && styles.typeButtonTextActive
+                          ]}>
+                            True/False
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+
+                    {question.question_type === 'multiple_choice' && (
+                      <MultipleChoiceEditor
+                        options={question.multiple_choice_options || []}
+                        allowsMultipleSelection={question.allow_multiple_selection || false}
+                        onOptionsChange={(options) => updateQuestionOptions(index, options)}
+                        onAllowsMultipleSelectionChange={(allows) => updateQuestionAllowsMultiple(index, allows)}
+                      />
+                    )}
 
                     <TouchableOpacity
-                      style={[
-                        styles.typeButton,
-                        question.question_type === 'multiple_choice' && styles.typeButtonActive
-                      ]}
-                      onPress={() => updateQuestionType(index, 'multiple_choice')}
+                      style={styles.removeButton}
+                      onPress={() => removeQuestion(index)}
                     >
-                      <Text style={[
-                        styles.typeButtonText,
-                        question.question_type === 'multiple_choice' && styles.typeButtonTextActive
-                      ]}>
-                        Multiple Choice
-                      </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={[
-                        styles.typeButton,
-                        question.question_type === 'true_false' && styles.typeButtonActive
-                      ]}
-                      onPress={() => updateQuestionType(index, 'true_false')}
-                    >
-                      <Text style={[
-                        styles.typeButtonText,
-                        question.question_type === 'true_false' && styles.typeButtonTextActive
-                      ]}>
-                        True/False
-                      </Text>
+                      <Text style={styles.removeButtonText}>×</Text>
                     </TouchableOpacity>
                   </View>
-                </View>
-
-                {question.question_type === 'multiple_choice' && (
-                  <MultipleChoiceEditor
-                    options={question.multiple_choice_options || []}
-                    allowsMultipleSelection={question.allow_multiple_selection || false}
-                    onOptionsChange={(options) => updateQuestionOptions(index, options)}
-                    onAllowsMultipleSelectionChange={(allows) => updateQuestionAllowsMultiple(index, allows)}
-                  />
-                )}
-
-                <TouchableOpacity
-                  style={styles.removeButton}
-                  onPress={() => removeQuestion(index)}
-                >
-                  <Text style={styles.removeButtonText}>×</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
+                ))}
+              </ScrollView>
+            </View>
 
             <TouchableOpacity
               style={styles.addButton}
               onPress={addQuestion}
             >
-              <Text style={styles.addButtonText}>+ Add Question</Text>
+              <Text style={styles.addButtonText}>Add Question</Text>
             </TouchableOpacity>
 
             <View style={styles.buttonContainer}>
@@ -598,7 +607,7 @@ const styles = StyleSheet.create({
     minHeight: '100%',
   },
   stepContainer: {
-    padding: 10,
+    padding: 0,
     width: '100%',
     maxWidth: 400,
     alignSelf: 'center',

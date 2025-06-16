@@ -1,5 +1,6 @@
+import React from 'react';
 import { useState, useCallback } from 'react';
-import { View } from 'react-native';
+import { StatusBar, View } from 'react-native';
 import { SplashScreen } from './src/components/SplashScreen';
 import { AuthProvider } from './src/context/AuthContext';
 import AppNavigator from './src/navigation/AppNavigator';
@@ -19,18 +20,21 @@ export default function App() {
   }
 
   return (
-    <StripeProvider
-      publishableKey={process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || ''}
-      urlScheme="mrandmrsapp"
-    >
-      <SafeAreaProvider>
-        <ToastProvider>
-          <AuthProvider>
-            <AppNavigator />
-          </AuthProvider>
-        </ToastProvider>
-      </SafeAreaProvider>
-    </StripeProvider>
+    <>
+      <StatusBar backgroundColor="#8A2BE2" translucent={false} />
+      <StripeProvider
+        publishableKey={process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || ''}
+        urlScheme="mrandmrsapp"
+      >
+        <SafeAreaProvider>
+          <ToastProvider>
+            <AuthProvider>
+              <AppNavigator />
+            </AuthProvider>
+          </ToastProvider>
+        </SafeAreaProvider>
+      </StripeProvider>
+    </>
   );
 }
 
