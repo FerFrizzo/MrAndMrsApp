@@ -323,7 +323,7 @@ const styles = StyleSheet.create({
   textInput: {
     backgroundColor: 'white',
     borderRadius: 12,
-    padding: 16,
+    padding: 10,
     fontSize: 16,
     minHeight: 80,
     marginBottom: 24,

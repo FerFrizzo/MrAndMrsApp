@@ -69,6 +69,14 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
       end={{ x: 1, y: 1 }}
     >
       <SafeAreaView style={styles.safeArea}>
+        {/* Create New Game Button */}
+        <TouchableOpacity
+          style={styles.createGameButton}
+          onPress={handleCreateGame}
+        >
+          <Text style={styles.createGameText}>Create New Game</Text>
+        </TouchableOpacity>
+
         <ScrollView
           style={styles.content}
           showsVerticalScrollIndicator={false}
@@ -80,15 +88,6 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
             />
           }
         >
-          {/* Create New Game Button */}
-          <TouchableOpacity
-            style={styles.createGameButton}
-            onPress={handleCreateGame}
-          >
-            <Text style={styles.createGameText}>Create New Game</Text>
-          </TouchableOpacity>
-
-
 
           {/* My Games Section */}
           <GamesSection
@@ -100,23 +99,20 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
           />
 
           {/* Games I'm Interviewed In Section */}
-          {partnerInterviewedGames.length > 0 && (
-            <GamesSection
-              title="Games I'm Interviewed In"
-              games={partnerInterviewedGames}
-              emptyMessage="No games to answer yet."
-              loading={loading}
-              refreshing={refreshing}
-            />
-          )}
-
-          <TouchableOpacity
-            style={styles.signOutButton}
-            onPress={signOut}
-          >
-            <Text style={styles.signOutText}>Sign Out</Text>
-          </TouchableOpacity>
+          <GamesSection
+            title="Games I'm Interviewed In"
+            games={partnerInterviewedGames}
+            emptyMessage="No games to answer yet."
+            loading={loading}
+            refreshing={refreshing}
+          />
         </ScrollView>
+        <TouchableOpacity
+          style={styles.signOutButton}
+          onPress={signOut}
+        >
+          <Text style={styles.signOutText}>Sign Out</Text>
+        </TouchableOpacity>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -141,14 +137,16 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 22,
   },
   createGameButton: {
     backgroundColor: '#FF7F50',
     borderRadius: 16,
+    width: '90%',
+    alignSelf: 'center',
     padding: 20,
     alignItems: 'center',
-    marginVertical: 20,
+    marginVertical: 40,
   },
   createGameText: {
     color: 'white',
@@ -158,9 +156,12 @@ const styles = StyleSheet.create({
   signOutButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 16,
+    width: '90%',
+    alignSelf: 'center',
     padding: 20,
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 10,
+    marginTop: 10,
   },
   signOutText: {
     color: 'white',

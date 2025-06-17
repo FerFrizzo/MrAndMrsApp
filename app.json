@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "MrAndMrsApp",
+    "name": "Mr and Mrs",
     "slug": "MrAndMrsApp",
     "scheme": "mrandmrsapp",
     "version": "1.0.0",
@@ -27,7 +27,7 @@
       "googleServicesFile": "./google-services.json"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/logo.png"
     },
     "plugins": [
       "@react-native-firebase/app",

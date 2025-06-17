@@ -7,7 +7,7 @@ import {
   StyleSheet,
   Alert
 } from 'react-native';
-import { AntDesign, MaterialIcons } from '@expo/vector-icons';
+import { AntDesign, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { Purple } from '../utils/Colors';
 
 interface MultipleChoiceEditorProps {
@@ -63,8 +63,10 @@ const MultipleChoiceEditor: React.FC<MultipleChoiceEditorProps> = ({
             <TouchableOpacity
               style={styles.removeButton}
               onPress={() => removeOption(index)}
+              accessibilityLabel="Remove option"
+              accessibilityRole="button"
             >
-              <AntDesign name="close" size={20} color="#FF3B30" />
+              <MaterialCommunityIcons name="trash-can-outline" size={22} color="#FF3B30" />
             </TouchableOpacity>
           </View>
         ))
@@ -93,7 +95,7 @@ const MultipleChoiceEditor: React.FC<MultipleChoiceEditorProps> = ({
 const styles = StyleSheet.create({
   container: {
     marginTop: 10,
-    marginBottom: 15,
+    marginBottom: 6,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 8,
     padding: 12,

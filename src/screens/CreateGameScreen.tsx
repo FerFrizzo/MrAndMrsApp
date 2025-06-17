@@ -20,9 +20,9 @@ import { Purple, PurpleLight } from '../utils/Colors';
 import { createGame, sendGameInvite } from '../services/gameService';
 import { GAME_STATUS_MAP, GameQuestion } from '../types/GameData';
 import MultipleChoiceEditor from '../components/MultipleChoiceEditor';
-import { Picker } from '@react-native-picker/picker';
 import { useToast } from '../contexts/ToastContext';
 import { openPaymentSheet } from '../services/paymentService';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 type CreateGameScreenProps = NativeStackScreenProps<RootStackParamList, 'CreateGame'>;
 
@@ -41,11 +41,10 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
   // Questions
   const [questions, setQuestions] = useState<GameQuestion[]>([
     { question_text: 'What is your partner\'s favorite food?', question_type: 'text' },
-    { question_text: 'What is your partner\'s dream vacation?', question_type: 'text' },
     {
       question_text: 'What would your partner pick as their favorite hobby?',
       question_type: 'multiple_choice',
-      multiple_choice_options: ['Reading', 'Sports', 'Cooking', 'Travel'],
+      multiple_choice_options: ['Reading', 'Sports', 'Travel'],
       allow_multiple_selection: false
     }
   ]);
@@ -269,7 +268,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
             <TextInput
               style={styles.input}
               placeholder="Enter game name"
-              placeholderTextColor="#A0A0A0"
+              placeholderTextColor="#999"
               value={gameName}
               onChangeText={setGameName}
             />
@@ -428,8 +427,10 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
                     <TouchableOpacity
                       style={styles.removeButton}
                       onPress={() => removeQuestion(index)}
+                      accessibilityLabel="Remove question"
+                      accessibilityRole="button"
                     >
-                      <Text style={styles.removeButtonText}>×</Text>
+                      <MaterialCommunityIcons name="trash-can-outline" size={22} color="#FF3B30" />
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -466,8 +467,8 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
           <View style={styles.stepContainer}>
             <Text style={styles.stepTitle}>Game Settings</Text>
 
-            <View style={styles.optionContainer}>
-              {/* <Text style={styles.optionLabel}>Premium Game</Text>
+            {/* <View style={styles.optionContainer}>
+              <Text style={styles.optionLabel}>Premium Game</Text>
               <TouchableOpacity
                 style={[
                   styles.toggle,
@@ -479,8 +480,8 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
                   styles.toggleHandle,
                   isPremium ? styles.toggleHandleActive : {}
                 ]} />
-              </TouchableOpacity> */}
-            </View>
+              </TouchableOpacity>
+            </View> */}
 
             {/* <Text style={styles.premiumNote}>
               Premium games cost $4.99 and include additional features
@@ -579,8 +580,8 @@ const styles = StyleSheet.create({
   stepsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    paddingVertical: 20,
-    marginTop: 20,
+    paddingVertical: 6,
+    marginTop: 6,
   },
   stepDot: {
     width: 10,
@@ -627,6 +628,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.8)',
     marginBottom: 24,
+    alignSelf: 'center',
   },
   label: {
     color: 'white',
@@ -637,8 +639,8 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: 'white',
     borderRadius: 8,
-    padding: 15,
-    marginBottom: 20,
+    padding: 10,
+    marginBottom: 16,
     fontSize: 16,
     width: '100%',
   },
@@ -680,7 +682,7 @@ const styles = StyleSheet.create({
   questionInput: {
     backgroundColor: 'white',
     borderRadius: 8,
-    padding: 15,
+    padding: 10,
     fontSize: 16,
     width: '100%',
     minHeight: 50,
@@ -706,7 +708,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 12,
   },
   addButtonText: {
     color: 'white',
@@ -725,7 +727,7 @@ const styles = StyleSheet.create({
   smallInput: {
     backgroundColor: 'white',
     borderRadius: 8,
-    padding: 12,
+    padding: 10,
     fontSize: 16,
     width: 100,
     textAlign: 'center',
@@ -787,7 +789,7 @@ const styles = StyleSheet.create({
   questionTypeContainer: {
     flexDirection: 'column',
     marginTop: 8,
-    marginBottom: 12,
+    marginBottom: 0,
   },
   questionTypeLabel: {
     color: 'white',
