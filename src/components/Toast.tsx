@@ -2,8 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Green, Pink, Yellow } from '../utils/Colors';
-
-export type ToastType = 'success' | 'error' | 'warning';
+import { ToastType } from '../contexts/ToastContext';
 
 interface ToastProps {
   visible: boolean;

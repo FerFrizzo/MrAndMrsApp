@@ -14,75 +14,75 @@ import {
 } from "../types/GameData"
 import { Platform } from "react-native"
 
-// Create a new game
-export const createGame = async (gameData: GameData): Promise<GameResponse> => {
-  try {
-    const { data: { user } } = await supabase.auth.getUser()
+// // Create a new game
+// export const createGame = async (gameData: GameData): Promise<GameResponse> => {
+//   try {
+//     const { data: { user } } = await supabase.auth.getUser()
 
-    if (!user) throw new Error('User not authenticated')
+//     if (!user) throw new Error('User not authenticated')
 
-    // Insert the game
-    const { data: game, error: gameError } = await supabase
-      .from('games')
-      .insert({
-        creator_id: user.id,
-        partner_interviewed_email: gameData.partner_interviewed_email,
-        partner_interviewed_name: gameData.partner_interviewed_name,
-        partner_playing_email: gameData.partner_playing_email,
-        partner_playing_name: gameData.partner_playing_name,
-        game_name: gameData.game_name,
-        occasion: gameData.occasion,
-        is_premium: gameData.is_premium || false,
-        status: 'in_creation',
-      })
-      .select()
-      .single()
+//     // Insert the game
+//     const { data: game, error: gameError } = await supabase
+//       .from('games')
+//       .insert({
+//         creator_id: user.id,
+//         partner_interviewed_email: gameData.partner_interviewed_email,
+//         partner_interviewed_name: gameData.partner_interviewed_name,
+//         partner_playing_email: gameData.partner_playing_email,
+//         partner_playing_name: gameData.partner_playing_name,
+//         game_name: gameData.game_name,
 
-    if (gameError) throw gameError
+//         is_premium: gameData.is_premium || false,
+//         status: 'in_creation',
+//       })
+//       .select()
+//       .single()
 
-    // If there are questions, insert them
-    if (gameData.questions && gameData.questions.length > 0) {
+//     if (gameError) throw gameError
 
-      const questionsToInsert = gameData.questions.map((q, index) => ({
-        game_id: game.id,
-        question_text: q.question_text,
-        question_type: q.question_type || 'text',
-        order_num: index + 1,
-        multiple_choice_options: q.multiple_choice_options || null,
-        allow_multiple_selection: q.allow_multiple_selection || false
-      }))
+//     // If there are questions, insert them
+//     if (gameData.questions && gameData.questions.length > 0) {
 
-      const { error: questionsError } = await supabase
-        .from('questions')
-        .insert(questionsToInsert)
+//       const questionsToInsert = gameData.questions.map((q, index) => ({
+//         game_id: game.id,
+//         question_text: q.question_text,
+//         question_type: q.question_type || 'text',
+//         order_num: index + 1,
+//         multiple_choice_options: q.multiple_choice_options || null,
+//         allow_multiple_selection: q.allow_multiple_selection || false
+//       }))
 
-      if (questionsError) throw questionsError
-    }
+//       const { error: questionsError } = await supabase
+//         .from('questions')
+//         .insert(questionsToInsert)
 
-    return { game, error: null }
-  } catch (error) {
-    console.error('Error creating game:', error)
-    return { game: null, error: error instanceof Error ? error : new Error(String(error)) }
-  }
-}
+//       if (questionsError) throw questionsError
+//     }
 
-// Get games created by the current user
-export const getCreatedGames = async (): Promise<GamesResponse> => {
-  try {
-    const { data: games, error } = await supabase
-      .from('games')
-      .select(`
-        *,
-        questions:questions(count)
-      `)
-      .order('created_at', { ascending: false })
+//     return { game, error: null }
+//   } catch (error) {
+//     console.error('Error creating game:', error)
+//     return { game: null, error: error instanceof Error ? error : new Error(String(error)) }
+//   }
+// }
 
-    if (error) throw error
-    return { games, error: null }
-  } catch (error) {
-    return { games: null, error: error instanceof Error ? error : new Error(String(error)) }
-  }
-}
+// // Get games created by the current user
+// export const getCreatedGames = async (): Promise<GamesResponse> => {
+//   try {
+//     const { data: games, error } = await supabase
+//       .from('games')
+//       .select(`
+//         *,
+//         questions:questions(count)
+//       `)
+//       .order('created_at', { ascending: false })
+
+//     if (error) throw error
+//     return { games, error: null }
+//   } catch (error) {
+//     return { games: null, error: error instanceof Error ? error : new Error(String(error)) }
+//   }
+// }
 
 // Get a specific game with its questions
 export const getGameWithQuestions = async (gameId: string): Promise<GameResponse> => {
@@ -118,7 +118,6 @@ export const updateGame = async (gameId: string, gameData: Partial<GameData>): P
       .from('games')
       .update({
         game_name: gameData.game_name,
-        occasion: gameData.occasion,
         updated_at: new Date(),
       })
       .eq('id', gameId)
@@ -319,7 +318,7 @@ export const getUserGames = async (): Promise<{ createdGames: GameItem[], partne
         id,
         game_name,
         created_at,
-        is_premium,
+        is_paid,
         status,
         questions(count)
       `)
@@ -335,7 +334,7 @@ export const getUserGames = async (): Promise<{ createdGames: GameItem[], partne
         id,
         game_name,
         created_at,
-        is_premium,
+        is_paid,
         status,
         questions(count)
       `)
@@ -352,7 +351,7 @@ export const getUserGames = async (): Promise<{ createdGames: GameItem[], partne
       createdAt: new Date(game.created_at).toLocaleDateString(),
       questionCount: game.questions[0]?.count || 0,
       status: game.status || 'created',
-      isPremium: game.is_premium || false,
+      is_paid: game.is_paid,
       colorDot: getStatusColor(game.status || 'created')
     }));
 
@@ -363,7 +362,7 @@ export const getUserGames = async (): Promise<{ createdGames: GameItem[], partne
       createdAt: new Date(game.created_at).toLocaleDateString(),
       questionCount: game.questions[0]?.count || 0,
       status: game.status || 'created',
-      isPremium: game.is_premium || false,
+      is_paid: game.is_paid,
       colorDot: getStatusColor(game.status || 'created')
     }));
 
@@ -581,6 +580,7 @@ export const createQuestion = async (question: GameQuestion): Promise<{ success:
         game_id: question.game_id,
         question_text: question.question_text,
         question_type: question.question_type,
+        order_num: question.order_num,
         multiple_choice_options: question.multiple_choice_options || null,
         allow_multiple_selection: question.allow_multiple_selection || false
       })
@@ -658,5 +658,50 @@ export async function completeGame(gameId: string): Promise<{ error: Error | nul
     return { error: null };
   } catch (error) {
     return { error: error instanceof Error ? error : new Error(String(error)) };
+  }
+}
+
+export type IsPaid = 'no' | 'basic' | 'premium';
+
+
+export async function createOrUpdateGame(gameData: GameData, gameId?: string) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+
+    const { data: existingGame, error: fetchError } = gameId
+      ? await supabase
+        .from('games')
+        .select('*')
+        .eq('id', gameId)
+        .single()
+      : { data: null, error: null };
+
+    if (fetchError && gameId) {
+      throw fetchError;
+    }
+
+    const objectToUpsert = {
+      ...gameData,
+      updated_at: new Date().toISOString(),
+      created_at: existingGame?.created_at || new Date().toISOString(),
+    }
+
+    const { data, error } = await supabase
+      .from('games')
+      .upsert({
+        creator_id: user?.id,
+        ...gameData,
+        updated_at: new Date().toISOString(),
+        created_at: existingGame?.created_at || new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return { game: data, error: null };
+  } catch (error: any) {
+    console.error('Error in createOrUpdateGame:', error.message);
+    return { game: null, error };
   }
 }

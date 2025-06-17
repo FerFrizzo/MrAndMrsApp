@@ -17,7 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/RootStackParamList';
 import { Purple, PurpleLight } from '../utils/Colors';
-import { createGame, sendGameInvite } from '../services/gameService';
+import { sendGameInvite, createOrUpdateGame } from '../services/gameService';
 import { GAME_STATUS_MAP, GameQuestion } from '../types/GameData';
 import MultipleChoiceEditor from '../components/MultipleChoiceEditor';
 import { useToast } from '../contexts/ToastContext';
@@ -29,6 +29,7 @@ type CreateGameScreenProps = NativeStackScreenProps<RootStackParamList, 'CreateG
 const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [gameId, setGameId] = useState<string | undefined>();
 
   // Game details
   const [gameName, setGameName] = useState('');
@@ -153,14 +154,89 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
     return true;
   };
 
-  const handleNext = () => {
-    if (validateStep(step)) {
+  const handleNext = async () => {
+    if (!validateStep(step)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      if (step === 1) {
+        // Create/Update game with initial details
+        if (!gameName.trim() || !partnerInterviewedEmail.trim() || !partnerInterviewedName.trim()) {
+          showToast('Please fill in game name, partner interviewed name and email', 'error');
+          return;
+        }
+
+        const { game, error } = await createOrUpdateGame({
+          game_name: gameName.trim(),
+          partner_interviewed_email: partnerInterviewedEmail.trim(),
+          partner_interviewed_name: partnerInterviewedName.trim(),
+          partner_playing_email: partnerPlayingEmail.trim() || undefined,
+          partner_playing_name: partnerPlayingName.trim() || undefined,
+          status: "in_creation",
+          is_paid: 'no',
+        }, gameId);
+
+        if (error) {
+          showToast('Failed to save game details', 'error');
+          return;
+        }
+
+        if (game) {
+          setGameId(game.id);
+        }
+      } else if (step === 2) {
+        // Update game with questions
+        // Validate all questions have text
+        const hasEmptyQuestions = questions.some(q => !q.question_text.trim());
+        if (hasEmptyQuestions) {
+          showToast('Please fill in all questions', 'error');
+          return;
+        }
+
+        // Validate multiple choice questions have at least 2 options
+        const hasInvalidMultipleChoice = questions.some(
+          q => q.question_type === 'multiple_choice' && (!q.multiple_choice_options || q.multiple_choice_options.length < 2)
+        );
+        if (hasInvalidMultipleChoice) {
+          showToast('Multiple choice questions must have at least 2 options', 'error');
+          return;
+        }
+
+        const { error } = await createOrUpdateGame({
+          game_name: gameName.trim(),
+          partner_interviewed_email: partnerInterviewedEmail.trim(),
+          partner_interviewed_name: partnerInterviewedName.trim(),
+          partner_playing_email: partnerPlayingEmail.trim() || undefined,
+          partner_playing_name: partnerPlayingName.trim() || undefined,
+          questions,
+          status: "in_creation",
+          is_paid: 'no',
+        }, gameId);
+
+        if (error) {
+          showToast('Failed to save questions', 'error');
+          return;
+        }
+      }
+
       setStep(step + 1);
+    } catch (error) {
+      console.error('Error saving game:', error);
+      showToast('An error occurred while saving', 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleBack = () => {
-    setStep(step - 1);
+    if (step > 1) {
+      setStep(step - 1);
+    } else {
+      navigation.goBack();
+    }
   };
 
   const handleCreateGame = async () => {
@@ -169,24 +245,8 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
       return;
     }
 
-    if (!gameName.trim() || !partnerInterviewedEmail.trim() || !partnerInterviewedName.trim()) {
-      showToast('Please fill in game name, partner interviewed name and email', 'error');
-      return;
-    }
-
-    // Validate all questions have text
-    const hasEmptyQuestions = questions.some(q => !q.question_text.trim());
-    if (hasEmptyQuestions) {
-      showToast('Please fill in all questions', 'error');
-      return;
-    }
-
-    // Validate multiple choice questions have at least 2 options
-    const hasInvalidMultipleChoice = questions.some(
-      q => q.question_type === 'multiple_choice' && (!q.multiple_choice_options || q.multiple_choice_options.length < 2)
-    );
-    if (hasInvalidMultipleChoice) {
-      showToast('Multiple choice questions must have at least 2 options', 'error');
+    if (!gameId) {
+      showToast('Game details not found', 'error');
       return;
     }
 
@@ -203,20 +263,17 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
               setLoading(true);
               await openPaymentSheet();
 
-              // Only create the game if payment succeeds
-              const gameData = {
+              // Update game with paid status after successful payment
+              const { game, error } = await createOrUpdateGame({
                 game_name: gameName.trim(),
                 partner_interviewed_email: partnerInterviewedEmail.trim(),
                 partner_interviewed_name: partnerInterviewedName.trim(),
-                partner_playing_email: partnerPlayingEmail.trim(),
-                partner_playing_name: partnerPlayingName.trim(),
-                occasion,
+                partner_playing_email: partnerPlayingEmail.trim() || undefined,
+                partner_playing_name: partnerPlayingName.trim() || undefined,
                 questions,
-                status: "in_creation" as keyof typeof GAME_STATUS_MAP,
-                is_premium: isPremium,
-              };
-
-              const { game, error } = await createGame(gameData);
+                status: "ready_to_play",
+                is_paid: isPremium ? 'premium' : 'basic',
+              }, gameId);
 
               if (error) throw error;
 
@@ -238,8 +295,6 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
                   }
                   showToast('Game created and invitation sent successfully!', 'success');
                 }
-              } else {
-                showToast('Game created successfully!', 'success');
               }
 
               navigation.navigate('Dashboard');
@@ -313,23 +368,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
               autoCapitalize="none"
             />
 
-            <Text style={styles.label}>Occasion</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g., Wedding, Anniversary"
-              placeholderTextColor="#A0A0A0"
-              value={occasion}
-              onChangeText={setOccasion}
-            />
-
             <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={() => navigation.goBack()}
-              >
-                <Text style={styles.backButtonText}>Back</Text>
-              </TouchableOpacity>
-
               <TouchableOpacity
                 style={styles.nextButton}
                 onPress={handleNext}
@@ -347,7 +386,6 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
             <Text style={styles.stepDescription}>
               Add questions {partnerInterviewedName} should answer before the game
             </Text>
-
             <View style={{ flex: 1 }}>
               <ScrollView
                 style={{ flex: 1 }}
@@ -446,13 +484,6 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
 
             <View style={styles.buttonContainer}>
               <TouchableOpacity
-                style={styles.backButton}
-                onPress={handleBack}
-              >
-                <Text style={styles.backButtonText}>Back</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
                 style={styles.nextButton}
                 onPress={handleNext}
               >
@@ -500,13 +531,6 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
             </View>
 
             <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={handleBack}
-                disabled={loading}
-              >
-                <Text style={styles.backButtonText}>Back</Text>
-              </TouchableOpacity>
 
               <TouchableOpacity
                 style={styles.nextButton}
@@ -539,6 +563,9 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.contentContainer}
       >
+        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+          <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
+        </TouchableOpacity>
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={[styles.scrollContent, { flexGrow: 1, justifyContent: 'center', minHeight: '100%' }]}
@@ -574,7 +601,9 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    paddingTop: 10,
     justifyContent: 'space-between',
   },
   stepsContainer: {
@@ -616,13 +645,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flex: 1,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 16,
+  },
   stepTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: 'white',
+    marginTop: 0,
+    marginBottom: 32,
+    alignSelf: 'center',
+  },
+  headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: 'white',
-    marginTop: 32,
-    marginBottom: 16,
-    alignSelf: 'center',
+  },
+  backButton: {
+    padding: 8,
   },
   stepDescription: {
     fontSize: 14,
@@ -649,17 +694,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: 10,
     gap: 10,
-  },
-  backButton: {
-    flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  backButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
   },
   nextButton: {
     flex: 1,

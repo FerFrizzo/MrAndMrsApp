@@ -9,4 +9,5 @@ export type RootStackParamList = {
   MainTabs: undefined;
   ReviewAnswers: { gameId: string };
   GameResult: { gameId: string };
+  Account: undefined;
 }; 

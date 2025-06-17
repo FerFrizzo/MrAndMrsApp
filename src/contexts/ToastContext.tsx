@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState } from 'react';
-import { Toast, ToastType } from '../components/Toast';
+import { Toast } from '../components/Toast';
 import { Dialog, DialogType, DialogButton } from '../components/Dialog';
+
+export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
 interface ToastContextType {
   showToast: (message: string, type?: ToastType) => void;

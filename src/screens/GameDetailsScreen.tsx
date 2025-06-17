@@ -15,12 +15,13 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/RootStackParamList';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Purple, PurpleLight, getStatusColor } from '../utils/Colors';
-import { getGameWithQuestions, sendGameInvite, updateQuestion, deleteQuestion, createQuestion, updateGame } from '../services/gameService';
+import { getGameWithQuestions, sendGameInvite, updateQuestion, deleteQuestion, createQuestion, updateGame, createOrUpdateGame } from '../services/gameService';
 import { GameData, GameQuestion, GAME_STATUS_MAP, getStatusLabel } from '../types/GameData';
 import { AntDesign, MaterialCommunityIcons, Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import MultipleChoiceEditor from '../components/MultipleChoiceEditor';
 import { useToast } from '../contexts/ToastContext';
 import { supabase } from '../config/supabaseClient';
+import { openPaymentSheet } from '../services/paymentService';
 
 type GameDetailsScreenProps = NativeStackScreenProps<RootStackParamList, 'GameDetails' | 'GameQuestion'>;
 
@@ -177,6 +178,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
           question_text: questionText.trim(),
           question_type: questionType,
           game_id: gameId,
+          order_num: questions.length + 1,
           multiple_choice_options: questionType === 'multiple_choice' ? multipleChoiceOptions : [],
           allow_multiple_selection: questionType === 'multiple_choice' ? allowsMultipleSelection : false
         };
@@ -258,7 +260,40 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
     }
 
     if (game.status !== 'ready_to_play') {
-      showToast(`This game needs to be set to Ready to Play so an invite can be sent to ${game.partner_interviewed_name}`, 'warning')
+      showDialog(
+        'Game Payment',
+        'Creating a game costs $2.99. Do you want to proceed to payment?',
+        [
+          { text: 'Cancel', style: 'cancel', onPress: () => { } },
+          {
+            text: 'Pay & Create',
+            style: 'default',
+            onPress: async () => {
+              try {
+                await openPaymentSheet();
+
+                // Update game with paid status after successful payment
+                const { error } = await createOrUpdateGame({
+                  ...game,
+                  status: "ready_to_play",
+                  is_paid: 'basic',
+                }, game.id);
+
+                if (error) throw error;
+
+                showToast('Payment successful! Game is ready to play.', 'success');
+
+                // Refresh game data
+                await fetchGameDetails();
+              } catch (error: any) {
+                console.error('Error:', error);
+                showToast(error.message || 'Payment failed', 'error');
+              }
+            }
+          }
+        ],
+        'confirm'
+      );
       return;
     }
 
@@ -421,7 +456,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
                       onAllowsMultipleSelectionChange={setAllowsMultipleSelection}
                     />
                   </View>
-                  <TouchableOpacity
+                  {/* <TouchableOpacity
                     style={styles.checkboxContainer}
                     onPress={() => setAllowsMultipleSelection(!allowsMultipleSelection)}
                   >
@@ -434,7 +469,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
                       )}
                     </View>
                     <Text style={styles.checkboxLabel}>Allow multiple answers</Text>
-                  </TouchableOpacity>
+                  </TouchableOpacity> */}
                 </View>
 
               )}
@@ -520,19 +555,14 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
                   <Text style={styles.infoValue}>{formatDate(game.created_at || '')}</Text>
                 </View>
 
-                {game.occasion && (
+
+                {game.is_paid && (
                   <View style={styles.infoRow}>
-                    <MaterialCommunityIcons name="party-popper" size={20} color={Purple} />
-                    <Text style={styles.infoLabel}>Occasion:</Text>
-                    <Text style={styles.infoValue}>{game.occasion}</Text>
+                    <MaterialCommunityIcons name={game.is_paid === 'premium' ? "crown" : "crown-outline"} size={20} color={game.is_paid === 'premium' ? "#FFCC00" : Purple} />
+                    <Text style={styles.infoLabel}>Type:</Text>
+                    <Text style={styles.infoValue}>{game.is_paid === 'premium' ? 'Premium' : game.is_paid === 'basic' ? 'Basic' : 'Not Paid Yet'}</Text>
                   </View>
                 )}
-
-                <View style={styles.infoRow}>
-                  <MaterialCommunityIcons name={game.is_premium ? "crown" : "crown-outline"} size={20} color={game.is_premium ? "#FFCC00" : Purple} />
-                  <Text style={styles.infoLabel}>Type:</Text>
-                  <Text style={styles.infoValue}>{game.is_premium ? 'Premium' : 'Basic'}</Text>
-                </View>
 
                 <View style={styles.infoRow}>
                   <Ionicons name="person-outline" size={20} color={Purple} />

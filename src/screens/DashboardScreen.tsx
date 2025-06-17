@@ -19,6 +19,8 @@ import { GameItem } from '../types/GameData';
 import { signOut } from '../services/authService';
 import { GameCard } from '../components/GameCard';
 import { GamesSection } from '../components/GamesSection';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Menu, Provider } from 'react-native-paper';
 
 type DashboardScreenProps = NativeStackScreenProps<RootStackParamList, 'Dashboard'>;
 
@@ -28,6 +30,20 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
   const [partnerInterviewedGames, setPartnerInterviewedGames] = useState<GameItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
+
+  const openMenu = () => setMenuVisible(true);
+  const closeMenu = () => setMenuVisible(false);
+
+  const handleAccountPress = () => {
+    closeMenu();
+    navigation.navigate('Account');
+  };
+
+  const handleSignOut = () => {
+    closeMenu();
+    signOut();
+  };
 
   const fetchGames = async () => {
     try {
@@ -62,59 +78,76 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
   };
 
   return (
-    <LinearGradient
-      colors={[Purple, PurpleLight]}
-      style={styles.container}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-    >
-      <SafeAreaView style={styles.safeArea}>
-        {/* Create New Game Button */}
-        <TouchableOpacity
-          style={styles.createGameButton}
-          onPress={handleCreateGame}
-        >
-          <Text style={styles.createGameText}>Create New Game</Text>
-        </TouchableOpacity>
+    <Provider>
+      <LinearGradient
+        colors={[Purple, PurpleLight]}
+        style={styles.container}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.header}>
+            <Menu
+              visible={menuVisible}
+              onDismiss={closeMenu}
+              anchor={
+                <TouchableOpacity onPress={openMenu} style={styles.menuButton}>
+                  <MaterialCommunityIcons name="dots-vertical" size={24} color="white" />
+                </TouchableOpacity>
+              }
+            >
+              <Menu.Item
+                onPress={handleAccountPress}
+                title="Account"
+                leadingIcon="account"
+              />
+              <Menu.Item
+                onPress={handleSignOut}
+                title="Sign Out"
+                leadingIcon="logout"
+              />
+            </Menu>
+          </View>
 
-        <ScrollView
-          style={styles.content}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
+          <TouchableOpacity
+            style={styles.createGameButton}
+            onPress={handleCreateGame}
+          >
+            <Text style={styles.createGameText}>Create New Game</Text>
+          </TouchableOpacity>
+
+          <ScrollView
+            style={styles.content}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor="white"
+              />
+            }
+          >
+            {/* My Games Section */}
+            <GamesSection
+              title="My Games"
+              games={createdGames}
+              emptyMessage="You haven't created any games yet."
+              loading={loading}
               refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor="white"
             />
-          }
-        >
 
-          {/* My Games Section */}
-          <GamesSection
-            title="My Games"
-            games={createdGames}
-            emptyMessage="You haven't created any games yet."
-            loading={loading}
-            refreshing={refreshing}
-          />
-
-          {/* Games I'm Interviewed In Section */}
-          <GamesSection
-            title="Games I'm Interviewed In"
-            games={partnerInterviewedGames}
-            emptyMessage="No games to answer yet."
-            loading={loading}
-            refreshing={refreshing}
-          />
-        </ScrollView>
-        <TouchableOpacity
-          style={styles.signOutButton}
-          onPress={signOut}
-        >
-          <Text style={styles.signOutText}>Sign Out</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
-    </LinearGradient>
+            {/* Games I'm Interviewed In Section */}
+            <GamesSection
+              title="Games I'm Interviewed In"
+              games={partnerInterviewedGames}
+              emptyMessage="No games to answer yet."
+              loading={loading}
+              refreshing={refreshing}
+            />
+          </ScrollView>
+        </SafeAreaView>
+      </LinearGradient>
+    </Provider>
   );
 };
 
@@ -126,14 +159,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: 'white',
+  menuButton: {
+    padding: 8,
   },
   content: {
     flex: 1,
@@ -149,21 +182,6 @@ const styles = StyleSheet.create({
     marginVertical: 40,
   },
   createGameText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  signOutButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 16,
-    width: '90%',
-    alignSelf: 'center',
-    padding: 20,
-    alignItems: 'center',
-    marginBottom: 10,
-    marginTop: 10,
-  },
-  signOutText: {
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',

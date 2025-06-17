@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     padding: 30,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    // backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 16,
     alignItems: 'center',
   },

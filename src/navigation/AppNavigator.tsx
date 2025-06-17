@@ -21,6 +21,7 @@ import GameDetailsScreen from '../screens/GameDetailsScreen';
 import GameQuestionScreen from '../screens/GameQuestionScreen';
 import ReviewAnswersScreen from '../screens/ReviewAnswersScreen';
 import GameResultScreen from '../screens/GameResultScreen';
+import AccountScreen from '../screens/AccountScreen';
 // Uncomment these when the screens are created
 // import ProfileScreen from '../screens/ProfileScreen';
 // import PlayGameScreen from '../screens/PlayGameScreen';
@@ -74,6 +75,11 @@ const MainAppNavigator = () => (
     <MainStack.Screen
       name="GameResult"
       component={GameResultScreen}
+      options={{ headerShown: false }}
+    />
+    <MainStack.Screen
+      name="Account"
+      component={AccountScreen}
       options={{ headerShown: false }}
     />
     {/* Uncomment these when the screens are created

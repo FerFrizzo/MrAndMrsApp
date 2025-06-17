@@ -19,6 +19,8 @@ export interface GameAnswer {
   isCorrect?: boolean;
 }
 
+export type IsPaid = 'no' | 'basic' | 'premium' | null;
+
 export const GAME_STATUS_MAP = {
   in_creation: 'In Creation',
   ready_to_play: 'Ready to Play',
@@ -50,11 +52,8 @@ export interface GameData {
   partner_playing_email?: string;
   partner_playing_name?: string;
   game_name: string;
-  occasion: string;
+  is_paid: IsPaid;
 
-  // Game settings
-  is_premium?: boolean;
-  access_code?: string;
   status?: keyof typeof GAME_STATUS_MAP;
 
   // Timestamps
@@ -80,7 +79,7 @@ export interface GameItem {
   createdAt: string;
   questionCount: number;
   status: string;
-  isPremium: boolean;
+  is_paid: string;
   colorDot: string;
 }
 
