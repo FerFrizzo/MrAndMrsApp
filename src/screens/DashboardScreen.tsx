@@ -8,6 +8,7 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
+  Modal,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/RootStackParamList';
@@ -20,7 +21,7 @@ import { signOut } from '../services/authService';
 import { GameCard } from '../components/GameCard';
 import { GamesSection } from '../components/GamesSection';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Menu, Provider } from 'react-native-paper';
+import { Menu, Provider, Button } from 'react-native-paper';
 
 type DashboardScreenProps = NativeStackScreenProps<RootStackParamList, 'Dashboard'>;
 
@@ -31,6 +32,8 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [howToPlayVisible, setHowToPlayVisible] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
 
   const openMenu = () => setMenuVisible(true);
   const closeMenu = () => setMenuVisible(false);
@@ -77,6 +80,83 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
     navigation.navigate('CreateGame');
   };
 
+  const HowToPlayModal = () => {
+    const steps = [
+      {
+        title: "Bridesmaid/Groomsman",
+        description: "1. Create a new game in the app\n2. Send the link to the partner who won't be at the party\n3. Wait for them to answer all questions\n4. Host the reveal party with the other partner!"
+      },
+      {
+        title: "Partner Answering",
+        description: "1. Get the link from your partner's friend\n2. Answer all questions honestly\n3. Submit your answers before the party\n4. Keep your answers secret!"
+      },
+      {
+        title: "Partner Playing",
+        description: "1. Come to the party\n2. Answer the same questions in front of everyone\n3. Watch as your answers are compared with your partner's\n4. Enjoy the fun and laughter!"
+      },
+      {
+        title: "Pro Tips!",
+        description: "• Mix fun and serious questions\n• Take videos of the reactions\n• Add a dare or challenge for each question answered incorrectly"
+      }
+    ];
+
+    const handleNext = () => {
+      if (currentStep < steps.length) {
+        setCurrentStep(currentStep + 1);
+      } else {
+        setHowToPlayVisible(false);
+        setCurrentStep(1);
+      }
+    };
+
+    const handleBack = () => {
+      if (currentStep > 1) {
+        setCurrentStep(currentStep - 1);
+      }
+    };
+
+    return (
+      <Modal
+        visible={howToPlayVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => {
+          setHowToPlayVisible(false);
+          setCurrentStep(1);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              {steps[currentStep - 1].title}
+            </Text>
+            <Text style={styles.modalDescription}>
+              {steps[currentStep - 1].description}
+            </Text>
+            <View style={styles.modalButtons}>
+              {currentStep > 1 && (
+                <Button
+                  mode="contained"
+                  onPress={handleBack}
+                  style={styles.modalButton}
+                >
+                  Back
+                </Button>
+              )}
+              <Button
+                mode="contained"
+                onPress={handleNext}
+                style={styles.modalButton}
+              >
+                {currentStep === steps.length ? "Close" : "Next"}
+              </Button>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
   return (
     <Provider>
       <LinearGradient
@@ -87,6 +167,13 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
       >
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.header}>
+            <TouchableOpacity 
+              style={styles.howToPlayButton}
+              onPress={() => setHowToPlayVisible(true)}
+            >
+              <MaterialCommunityIcons name="help-circle-outline" size={24} color="white" />
+              <Text style={styles.howToPlayText}>How to Play</Text>
+            </TouchableOpacity>
             <Menu
               visible={menuVisible}
               onDismiss={closeMenu}
@@ -115,6 +202,8 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
           >
             <Text style={styles.createGameText}>Create New Game</Text>
           </TouchableOpacity>
+
+          <HowToPlayModal />
 
           <ScrollView
             style={styles.content}
@@ -145,6 +234,8 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
               refreshing={refreshing}
             />
           </ScrollView>
+
+          
         </SafeAreaView>
       </LinearGradient>
     </Provider>
@@ -160,7 +251,7 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -208,6 +299,53 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 20,
+    padding: 20,
+    width: '90%',
+    maxWidth: 400,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  modalDescription: {
+    fontSize: 16,
+    lineHeight: 24,
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 20,
+  },
+  modalButton: {
+    minWidth: 100,
+  },
+  howToPlayButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: 150,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  howToPlayText: {
+    color: 'white',
+    marginLeft: 8,
+    fontSize: 16,
+    fontWeight: '500',
   },
 });
 
