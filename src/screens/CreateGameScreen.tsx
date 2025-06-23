@@ -17,12 +17,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/RootStackParamList';
 import { Purple, PurpleLight } from '../utils/Colors';
-import { sendGameInvite, createOrUpdateGame } from '../services/gameService';
+import { sendGameInvite, createOrUpdateGame, createQuestion, deleteQuestion, getGameWithQuestions } from '../services/gameService';
 import { GAME_STATUS_MAP, GameQuestion } from '../types/GameData';
 import MultipleChoiceEditor from '../components/MultipleChoiceEditor';
 import { useToast } from '../contexts/ToastContext';
 import { openPaymentSheet } from '../services/paymentService';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { PlatformPay, PlatformPayButton } from '@stripe/stripe-react-native';
 
 type CreateGameScreenProps = NativeStackScreenProps<RootStackParamList, 'CreateGame'>;
 
@@ -188,14 +189,12 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
           setGameId(game.id);
         }
       } else if (step === 2) {
-        // Update game with questions
         // Validate all questions have text
         const hasEmptyQuestions = questions.some(q => !q.question_text.trim());
         if (hasEmptyQuestions) {
           showToast('Please fill in all questions', 'error');
           return;
         }
-
         // Validate multiple choice questions have at least 2 options
         const hasInvalidMultipleChoice = questions.some(
           q => q.question_type === 'multiple_choice' && (!q.multiple_choice_options || q.multiple_choice_options.length < 2)
@@ -204,21 +203,28 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
           showToast('Multiple choice questions must have at least 2 options', 'error');
           return;
         }
-
-        const { error } = await createOrUpdateGame({
-          game_name: gameName.trim(),
-          partner_interviewed_email: partnerInterviewedEmail.trim(),
-          partner_interviewed_name: partnerInterviewedName.trim(),
-          partner_playing_email: partnerPlayingEmail.trim() || undefined,
-          partner_playing_name: partnerPlayingName.trim() || undefined,
-          questions,
-          status: "in_creation",
-          is_paid: 'no',
-        }, gameId);
-
-        if (error) {
-          showToast('Failed to save questions', 'error');
-          return;
+        // Delete old questions and create new ones
+        if (gameId) {
+          const { game, error: fetchError } = await getGameWithQuestions(gameId);
+          if (fetchError) {
+            showToast('Failed to fetch existing questions', 'error');
+            return;
+          }
+          const oldQuestionIds = (game?.questions || []).map((q: any) => q.id).filter(Boolean);
+          for (const id of oldQuestionIds) {
+            await deleteQuestion(id);
+          }
+          for (const [index, q] of questions.entries()) {
+            const { success, error } = await createQuestion({
+              ...q,
+              game_id: gameId,
+              order_num: index + 1,
+            });
+            if (error || !success) {
+              showToast('Failed to save question: ' + (q.question_text || ''), 'error');
+              return;
+            }
+          }
         }
       }
 
@@ -531,6 +537,11 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
             </View>
 
             <View style={styles.buttonContainer}>
+                {/* <PlatformPayButton
+                    type={PlatformPay.ButtonType.Pay}
+                    onPress={handleCreateGame}
+                    style={{ width: '100%', height: 48, marginBottom: 16 }}
+                  /> */}
 
               <TouchableOpacity
                 style={styles.nextButton}

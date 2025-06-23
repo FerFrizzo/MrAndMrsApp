@@ -23,7 +23,7 @@ function GameCard({ game }: GameCardProps) {
         <Text style={styles.gameTitle}>{game.title}</Text>
         <Text style={styles.gameInfo}>
           {game.createdAt} • {game.questionCount} questions
-          {game.isPremium && ' • Premium'}
+          {/* {game.isPremium && ' • Premium'} */}
         </Text>
         <Text style={styles.statusText}>
           Status: <Text style={{ color: game.colorDot }}>{getStatusLabel(game.status)}</Text>
