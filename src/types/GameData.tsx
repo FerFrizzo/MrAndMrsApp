@@ -17,6 +17,8 @@ export interface GameAnswer {
   question_id: string;
   partner_interviewed_answer: string | null;
   isCorrect?: boolean;
+  media_url?: string | null;
+  media_type?: 'image' | 'video' | null;
 }
 
 export type IsPaid = 'no' | 'basic' | 'premium' | null;

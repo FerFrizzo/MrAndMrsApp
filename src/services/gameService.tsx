@@ -12,6 +12,7 @@ import {
   GameItem,
   GameAnswer
 } from "../types/GameData"
+import { uploadMediaToSupabase } from './mediaService';
 import { Platform } from "react-native"
 
 // // Create a new game
@@ -600,21 +601,32 @@ export const createQuestion = async (question: GameQuestion): Promise<{ success:
 };
 
 // Save a single answer for a question (target user)
-export async function saveSingleAnswer(gameId: string, questionId: string, answer: string): Promise<{ error: Error | null }> {
+export async function saveSingleAnswer(
+  questionId: string, 
+  answer?: string,
+  mediaUrl?: string,
+  mediaType?: 'image' | 'video'
+): Promise<{ error: Error | null }> {
   try {
     // Check if answer exists
-
     const { data: existingAnswer, error: checkError } = await supabase
       .from('answers')
       .select('*')
       .eq('question_id', questionId)
       .single();
     if (checkError && checkError.code !== 'PGRST116') throw checkError;
+    
+    const answerData = {
+      partner_interviewed_answer: answer,
+      ...(mediaUrl && { media_url: mediaUrl }),
+      ...(mediaType && { media_type: mediaType }),
+    };
+
     if (existingAnswer) {
       // Update existing answer
       const { error: updateError } = await supabase
         .from('answers')
-        .update({ partner_interviewed_answer: answer })
+        .update(answerData)
         .eq('id', existingAnswer.id);
       if (updateError) throw updateError;
     } else {
@@ -623,13 +635,71 @@ export async function saveSingleAnswer(gameId: string, questionId: string, answe
         .from('answers')
         .insert({
           question_id: questionId,
-          partner_interviewed_answer: answer,
+          ...answerData,
         });
       if (insertError) throw insertError;
     }
     return { error: null };
   } catch (error) {
     console.error('Error in saveSingleAnswer:', error);
+    return { error: error instanceof Error ? error : new Error(String(error)) };
+  }
+}
+
+// Save answer with media upload
+export async function saveAnswerWithMedia(
+  questionId: string,
+  answer?: string,
+  mediaFile?: { uri: string; type: 'image' | 'video'; name: string }
+): Promise<{ error: Error | null }> {
+  try {
+    let mediaUrl: string | undefined;
+    let mediaType: 'image' | 'video' | undefined;
+
+    // Upload media if provided
+    if (mediaFile) {    
+      // First save the answer to get the answer ID
+      const { data: existingAnswer, error: checkError } = await supabase
+        .from('answers')
+        .select('*')
+        .eq('question_id', questionId)
+        .single();
+
+      let answerId: string;
+
+      if (checkError && checkError.code === 'PGRST116') {
+        
+        // Create new answer first
+        const { data: newAnswer, error: insertError } = await supabase
+          .from('answers')
+          .insert({
+            question_id: questionId,
+            partner_interviewed_answer: answer || 'Media attached',
+            media_url: mediaFile.uri,
+            media_type: mediaFile.type,
+          })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+        answerId = newAnswer.id;
+      } else {
+        answerId = existingAnswer.id;
+      }
+
+      const extension = mediaFile.name.split('.').pop();
+      const mediaName = `answer-${answerId}-${Date.now()}.${extension}`;
+      mediaFile.name = mediaName;
+      // Upload media
+      const uploadResult = await uploadMediaToSupabase(mediaFile);
+      mediaUrl = uploadResult.mediaUrl;
+      mediaType = uploadResult.mediaType;
+    }
+
+    // Save answer with media info
+    return await saveSingleAnswer(questionId, answer, mediaUrl, mediaType);
+  } catch (error) {
+    console.error('Error in saveAnswerWithMedia:', error);
     return { error: error instanceof Error ? error : new Error(String(error)) };
   }
 }
@@ -681,6 +751,7 @@ export async function createOrUpdateGame(gameData: GameData, gameId?: string) {
     }
 
     const objectToUpsert = {
+      creator_id: user?.id,
       ...gameData,
       updated_at: new Date().toISOString(),
       created_at: existingGame?.created_at || new Date().toISOString(),
@@ -694,6 +765,45 @@ export async function createOrUpdateGame(gameData: GameData, gameId?: string) {
         updated_at: new Date().toISOString(),
         created_at: existingGame?.created_at || new Date().toISOString(),
       })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return { game: data, error: null };
+  } catch (error: any) {
+    console.error('Error in createOrUpdateGame:', error.message);
+    return { game: null, error };
+  }
+}
+
+export async function updateGameData(gameData: GameData, gameId?: string) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+
+    const { data: existingGame, error: fetchError } = gameId
+      ? await supabase
+        .from('games')
+        .select('*')
+        .eq('id', gameId)
+        .single()
+      : { data: null, error: null };
+
+    if (fetchError && gameId) {
+      throw fetchError;
+    }
+
+    const objectToUpsert = {
+      creator_id: user?.id,
+      ...gameData,
+      updated_at: new Date().toISOString(),
+      created_at: existingGame?.created_at || new Date().toISOString(),
+    }
+
+    const { data, error } = await supabase
+      .from('games')
+      .update(objectToUpsert)
+      .eq('id', gameId)
       .select()
       .single();
 

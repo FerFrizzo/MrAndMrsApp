@@ -31,6 +31,7 @@ function GamesSection({ title, games, emptyMessage, loading, refreshing }: Games
 const styles = StyleSheet.create({
   gamesSection: {
     marginBottom: 20,
+    marginTop: 20,
   },
   sectionTitle: {
     fontSize: 22,

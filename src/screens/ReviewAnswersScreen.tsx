@@ -126,7 +126,13 @@ export default function ReviewAnswersScreen({ route, navigation }: ReviewAnswers
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <Text style={styles.progressText}>{currentIndex + 1} / {questionsWithAnswers.length}</Text>
           <Text style={styles.questionText}>{question.question_text}</Text>
-          <AnswerCard question={question} answer={answer?.partner_interviewed_answer ?? null} partnerInterviewedName={game.partner_interviewed_name} />
+          <AnswerCard 
+            question={question} 
+            answer={answer?.partner_interviewed_answer ?? null} 
+            partnerInterviewedName={game.partner_interviewed_name}
+            mediaUrl={answer?.media_url}
+            mediaType={answer?.media_type}
+          />
           <View style={styles.buttonRow}>
             <TouchableOpacity
               style={[styles.actionButton, { backgroundColor: '#F44336' }]}

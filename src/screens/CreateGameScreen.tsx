@@ -17,7 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/RootStackParamList';
 import { Purple, PurpleLight } from '../utils/Colors';
-import { sendGameInvite, createOrUpdateGame, createQuestion, deleteQuestion, getGameWithQuestions } from '../services/gameService';
+import { sendGameInvite, createOrUpdateGame, createQuestion, deleteQuestion, getGameWithQuestions, updateGameData } from '../services/gameService';
 import { GAME_STATUS_MAP, GameQuestion } from '../types/GameData';
 import MultipleChoiceEditor from '../components/MultipleChoiceEditor';
 import { useToast } from '../contexts/ToastContext';
@@ -245,7 +245,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
     }
   };
 
-  const handleCreateGame = async () => {
+  const handleCreateGame = async (isPremium: boolean) => {
     if (questions.length === 0) {
       showToast('You must have at least one question', 'error');
       return;
@@ -256,9 +256,11 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
       return;
     }
 
+    const price = isPremium ? 299 : 199;
+
     showDialog(
       'Create Game',
-      'Creating a game costs $2.99. Do you want to proceed to payment?',
+      `Creating a ${isPremium ? 'premium game costs $2.99' : 'basic game costs $1.99'}. Do you want to proceed to payment?`,
       [
         { text: 'Cancel', style: 'cancel', onPress: () => { } },
         {
@@ -267,16 +269,16 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
           onPress: async () => {
             try {
               setLoading(true);
-              await openPaymentSheet();
+              await openPaymentSheet(price);
 
               // Update game with paid status after successful payment
-              const { game, error } = await createOrUpdateGame({
+              const { game, error } = await updateGameData({
                 game_name: gameName.trim(),
                 partner_interviewed_email: partnerInterviewedEmail.trim(),
                 partner_interviewed_name: partnerInterviewedName.trim(),
                 partner_playing_email: partnerPlayingEmail.trim() || undefined,
                 partner_playing_name: partnerPlayingName.trim() || undefined,
-                questions,
+                // questions,
                 status: "ready_to_play",
                 is_paid: isPremium ? 'premium' : 'basic',
               }, gameId);
@@ -504,7 +506,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
           <View style={styles.stepContainer}>
             <Text style={styles.stepTitle}>Game Settings</Text>
 
-            {/* <View style={styles.optionContainer}>
+            <View style={styles.optionContainer}>
               <Text style={styles.optionLabel}>Premium Game</Text>
               <TouchableOpacity
                 style={[
@@ -518,11 +520,11 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
                   isPremium ? styles.toggleHandleActive : {}
                 ]} />
               </TouchableOpacity>
-            </View> */}
+            </View>
 
-            {/* <Text style={styles.premiumNote}>
-              Premium games cost $4.99 and include additional features
-            </Text> */}
+            <Text style={styles.premiumNote}>
+              Premium games cost $2.99 and allow you to answer questions with images and videos!
+            </Text>
 
             <View style={styles.summaryContainer}>
               <Text style={styles.summaryTitle}>Summary</Text>
@@ -532,7 +534,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
               <Text style={styles.summaryItem}>Questions: {questions.length}</Text>
               <Text style={styles.summaryItem}>Type: {isPremium ? 'Premium' : 'Basic'}</Text>
               <Text style={styles.summaryItem}>
-                Price: {isPremium ? '$4.99' : '$2.99'}
+                Price: {isPremium ? '$2.99' : '$1.99'}
               </Text>
             </View>
 
@@ -545,7 +547,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
 
               <TouchableOpacity
                 style={styles.nextButton}
-                onPress={handleCreateGame}
+                onPress={() => handleCreateGame(isPremium)}
                 disabled={loading}
               >
                 {loading ? (

@@ -220,16 +220,16 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
             <GamesSection
               title="My Games"
               games={createdGames}
-              emptyMessage="You haven't created any games yet."
+              emptyMessage="Hit that create game button!"
               loading={loading}
               refreshing={refreshing}
             />
 
             {/* Games I'm Interviewed In Section */}
             <GamesSection
-              title="Games I'm Interviewed In"
+              title="What I Need to Respond To"
               games={partnerInterviewedGames}
-              emptyMessage="No games to answer yet."
+              emptyMessage="Hold on, you haven't been interviewed in any games yet."
               loading={loading}
               refreshing={refreshing}
             />

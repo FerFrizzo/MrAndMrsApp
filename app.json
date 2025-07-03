@@ -8,11 +8,6 @@
     "icon": "./assets/logo.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/logo.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#8A4FFF"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.ferfrizzo.MrAndMrsApp",
@@ -43,7 +38,9 @@
             "kotlinVersion": "2.0.21"
           }
         }
-      ]
+      ],
+      "expo-video",
+      "expo-font"
     ]
   }
 }

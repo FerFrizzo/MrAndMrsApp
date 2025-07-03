@@ -1,17 +1,17 @@
 import { initPaymentSheet, presentPaymentSheet } from '@stripe/stripe-react-native';
 
-export async function fetchPaymentSheetParams() {
+export async function fetchPaymentSheetParams(price: number) {
   // Call your Supabase Edge Function to create a PaymentIntent, Ephemeral Key, and Customer
   const response = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/create-payment-intent`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ amount: 299, currency: 'usd' }),
+    body: JSON.stringify({ amount: price, currency: 'usd' }),
   });
   return response.json();
 }
 
-export async function openPaymentSheet() {
-  const { paymentIntent, ephemeralKey, customer, error } = await fetchPaymentSheetParams();
+export async function openPaymentSheet(price: number) {
+  const { paymentIntent, ephemeralKey, customer, error } = await fetchPaymentSheetParams(price);
   if (error) throw new Error(error);
 
   const { error: initError } = await initPaymentSheet({

@@ -262,15 +262,15 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
     if (game.status !== 'ready_to_play') {
       showDialog(
         'Game Payment',
-        'Creating a game costs $2.99. Do you want to proceed to payment?',
+        'Choose your game plan to proceed:',
         [
           { text: 'Cancel', style: 'cancel', onPress: () => { } },
           {
-            text: 'Pay & Create',
+            text: 'Pay & Create Basic',
             style: 'default',
             onPress: async () => {
               try {
-                await openPaymentSheet();
+                await openPaymentSheet(199);
 
                 // Update game with paid status after successful payment
                 const { error } = await createOrUpdateGame({
@@ -281,7 +281,33 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
 
                 if (error) throw error;
 
-                showToast('Payment successful! Game is ready to play.', 'success');
+                showToast('Payment successful! Basic game is ready to play.', 'success');
+
+                // Refresh game data
+                await fetchGameDetails();
+              } catch (error: any) {
+                console.error('Error:', error);
+                showToast(error.message || 'Payment failed', 'error');
+              }
+            }
+          },
+          {
+            text: 'Pay & Create Premium',
+            style: 'default',
+            onPress: async () => {
+              try {
+                await openPaymentSheet(299);
+
+                // Update game with paid status after successful payment
+                const { error } = await createOrUpdateGame({
+                  ...game,
+                  status: "ready_to_play",
+                  is_paid: 'premium',
+                }, game.id);
+
+                if (error) throw error;
+
+                showToast('Payment successful! Premium game is ready to play.', 'success');
 
                 // Refresh game data
                 await fetchGameDetails();

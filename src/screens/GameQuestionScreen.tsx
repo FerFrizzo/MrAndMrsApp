@@ -15,26 +15,37 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/RootStackParamList';
 import { Purple, PurpleLight } from '../utils/Colors';
-import { getGameWithQuestions, submitAnswers, saveSingleAnswer } from '../services/gameService';
-import { GameQuestion } from '../types/GameData';
+import { getGameWithQuestions, submitAnswers, saveSingleAnswer, saveAnswerWithMedia } from '../services/gameService';
+import { GameQuestion, GameData } from '../types/GameData';
+import { MediaFile } from '../services/mediaService';
+import MediaUpload from '../components/MediaUpload';
+import { useToast } from '../contexts/ToastContext';
 import { z } from 'zod';
 
 interface AnswerMap {
   [questionId: string]: string | string[] | boolean;
 }
 
+interface MediaMap {
+  [questionId: string]: MediaFile | null;
+}
+
 type GameQuestionScreenProps = NativeStackScreenProps<RootStackParamList, 'GameQuestion'>;
 
 function GameQuestionScreen({ route, navigation }: GameQuestionScreenProps) {
   const { gameId } = route.params;
+  const { showToast } = useToast();
   const [questions, setQuestions] = useState<GameQuestion[]>([]);
+  const [game, setGame] = useState<GameData | null>(null);
   const [loading, setLoading] = useState(true);
   const [current, setCurrent] = useState(0);
   const [answers, setAnswers] = useState<AnswerMap>({});
+  const [mediaFiles, setMediaFiles] = useState<MediaMap>({});
   const [submitting, setSubmitting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  
 
   useEffect(() => {
     fetchQuestions();
@@ -45,8 +56,10 @@ function GameQuestionScreen({ route, navigation }: GameQuestionScreenProps) {
     setError(null);
     try {
       const { game, error } = await getGameWithQuestions(gameId);
+      
       if (error || !game?.questions) throw error || new Error('No questions found');
       setQuestions(game.questions);
+      setGame(game);
     } catch (err: any) {
       setError(err.message || 'Failed to load questions');
     } finally {
@@ -60,35 +73,129 @@ function GameQuestionScreen({ route, navigation }: GameQuestionScreenProps) {
     setAnswers((prev) => ({ ...prev, [q.id!]: value }));
   }
 
-  async function handleNext() {
-    if (saving) return;
-    setSaving(true);
+  function handleMediaSelect(media: MediaFile | null) {
     const q = questions[current];
+    if (!q?.id) return;
+    setMediaFiles((prev) => ({ ...prev, [q.id!]: media }));
+  }
+
+  // Validation result type
+  interface ValidationResult {
+    isValid: boolean;
+    errorMessage?: string;
+  }
+
+  // Answer value type union
+  type AnswerValue = string | string[] | boolean | undefined | null;
+
+  // Centralized validation function
+  const validateQuestion = useCallback((
+    question: GameQuestion, 
+    answer: AnswerValue, 
+    mediaFile: MediaFile | null
+  ): ValidationResult => {
+    const isPremium: boolean = game?.is_paid === 'premium';
+    
+    // For premium games, media is sufficient
+    if (isPremium && mediaFile) {
+      return { isValid: true };
+    }
+    
+    // For all other cases, validate based on question type
+    switch (question.question_type) {
+      case 'text': {
+        const textAnswer: string = answer as string;
+        if (!textAnswer || textAnswer.trim() === '') {
+          return { isValid: false, errorMessage: 'Text answer required' };
+        }
+        break;
+      }
+        
+      case 'true_false': {
+        const booleanAnswer: boolean = answer as boolean;
+        if (booleanAnswer === undefined || booleanAnswer === null) {
+          return { isValid: false, errorMessage: 'True/False answer required' };
+        }
+        break;
+      }
+        
+      case 'multiple_choice': {
+        if (question.allow_multiple_selection) {
+          const arrayAnswer: string[] = answer as string[];
+          if (!Array.isArray(arrayAnswer) || arrayAnswer.length === 0) {
+            return { isValid: false, errorMessage: 'Select at least one option' };
+          }
+        } else {
+          const singleAnswer: string = answer as string;
+          if (!singleAnswer || singleAnswer.trim() === '') {
+            return { isValid: false, errorMessage: 'Select one option' };
+          }
+        }
+        break;
+      }
+    }
+    
+    return { isValid: true };
+  }, [game?.is_paid]);
+
+  async function handleNext(): Promise<void> {
+    if (saving) return;
+    
+    const q: GameQuestion = questions[current];
     if (!q?.id) {
-      setSaving(false);
       return;
     }
-    const a = answers[q.id!];
-    let answerStr = '';
-    if (q.question_type === 'multiple_choice' && q.allow_multiple_selection) {
-      answerStr = Array.isArray(a) ? a.join(',') : '';
-    } else if (typeof a === 'boolean') {
-      answerStr = a ? 'true' : 'false';
-    } else {
-      answerStr = a as string;
+    
+    const answer: AnswerValue = answers[q.id!];
+    const mediaFile: MediaFile | null = mediaFiles[q.id!];
+    
+    const validation: ValidationResult = validateQuestion(q, answer, mediaFile);
+    
+    if (!validation.isValid) {
+      const errorMessage: string = validation.errorMessage || 'Answer required';
+      setError(`Please answer this question before proceeding. ${errorMessage}`);
+      return;
     }
+    
+    setSaving(true);
+    setError(null);
+    
+    let answerStr: string = '';
+    if (q.question_type === 'multiple_choice' && q.allow_multiple_selection) {
+      const arrayAnswer: string[] = answer as string[];
+      answerStr = Array.isArray(arrayAnswer) ? arrayAnswer.join(',') : '';
+    } else if (typeof answer === 'boolean') {
+      const booleanAnswer: boolean = answer as boolean;
+      answerStr = booleanAnswer ? 'true' : 'false';
+    } else {
+      const textAnswer: string = answer as string;
+      answerStr = textAnswer;
+    }
+    
+    const currentMediaFile: MediaFile | null = mediaFiles[q.id!];
+    
     try {
-      const { error: saveError } = await saveSingleAnswer(gameId, q.id!, answerStr);
+      let saveError;
+      
+      // Use saveAnswerWithMedia for premium games with media, otherwise use saveSingleAnswer
+      if (game?.is_paid === 'premium' && currentMediaFile) {
+        const result = await saveAnswerWithMedia(q.id!, answerStr, currentMediaFile);
+        saveError = result.error;
+      } else {
+        const result = await saveSingleAnswer(q.id!, answerStr);
+        saveError = result.error;
+      }
+      
       if (saveError) {
-        setError(saveError.message || 'Failed to save answer');
+        setError(saveError.message || 'Failed to save answer. Please try again.');
         setSaving(false);
         return;
       }
-      setError(null);
+      
       if (current < questions.length - 1) setCurrent((c) => c + 1);
       else setShowConfirm(true);
     } catch (err: any) {
-      setError(err.message || 'Unexpected error saving answer');
+      showToast(err.message || 'Unexpected error saving answer. Please try again.', 'error');
     } finally {
       setSaving(false);
     }
@@ -99,28 +206,40 @@ function GameQuestionScreen({ route, navigation }: GameQuestionScreenProps) {
     else navigation.goBack();
   }
 
-  const validateAnswers = useCallback(() => {
-    const schema = z.object(
-      Object.fromEntries(
-        questions.map((q) => {
-          if (q.question_type === 'text') return [q.id!, z.string().min(1, 'Required')];
-          if (q.question_type === 'true_false') return [q.id!, z.boolean()];
-          if (q.question_type === 'multiple_choice') {
-            if (q.allow_multiple_selection) return [q.id!, z.array(z.string()).min(1, 'Select at least one')];
-            return [q.id!, z.string().min(1, 'Select one')];
-          }
-          return [q.id!, z.any()];
-        })
-      )
-    );
-    return schema.safeParse(answers);
-  }, [answers, questions]);
+  // Validation summary result type
+  interface ValidationSummary {
+    success: boolean;
+    errors: string[];
+  }
 
-  async function handleSubmit() {
-    const validation = validateAnswers();
+  const validateAnswers = useCallback((): ValidationSummary => {
+    const missingAnswers: string[] = [];
+    
+    questions.forEach((q: GameQuestion) => {
+      const answer: AnswerValue = answers[q.id!];
+      const mediaFile: MediaFile | null = mediaFiles[q.id!];
+      
+      const validation: ValidationResult = validateQuestion(q, answer, mediaFile);
+      
+      if (!validation.isValid) {
+        const questionNumber: number = questions.findIndex((question: GameQuestion) => question.id === q.id) + 1;
+        const errorMessage: string = validation.errorMessage || 'Answer required';
+        missingAnswers.push(`Question ${questionNumber}: ${errorMessage}`);
+      }
+    });
+    
+    return {
+      success: missingAnswers.length === 0,
+      errors: missingAnswers
+    };
+  }, [answers, questions, mediaFiles, validateQuestion]);
+
+  async function handleSubmit(): Promise<void> {
+    
+    const validation: ValidationSummary = validateAnswers();
     if (!validation.success) {
-      console.error('validation failed');
-      setError(Object.values(validation.error.flatten().fieldErrors).flat().join(', '));
+      console.error('validation failed', validation.errors);
+      setError(validation.errors.join(', '));
       return;
     }
     setSubmitting(true);
@@ -128,14 +247,22 @@ function GameQuestionScreen({ route, navigation }: GameQuestionScreenProps) {
     try {
       // Convert answers to Record<string, string> for API
       const apiAnswers: Record<string, string> = {};
-      questions.forEach((q) => {
-        const a = answers[q.id!];
-        if (q.question_type === 'multiple_choice' && q.allow_multiple_selection) {
-          apiAnswers[q.id!] = Array.isArray(a) ? a.join(',') : '';
-        } else if (typeof a === 'boolean') {
-          apiAnswers[q.id!] = a ? 'true' : 'false';
+      questions.forEach((q: GameQuestion) => {
+        const answer: AnswerValue = answers[q.id!];
+        const mediaFile: MediaFile | null = mediaFiles[q.id!];
+        
+        // For premium games with media, use empty string as answer (media will be handled separately)
+        if (game?.is_paid === 'premium' && mediaFile) {
+          apiAnswers[q.id!] = '';
+        } else if (q.question_type === 'multiple_choice' && q.allow_multiple_selection) {
+          const arrayAnswer: string[] = answer as string[];
+          apiAnswers[q.id!] = Array.isArray(arrayAnswer) ? arrayAnswer.join(',') : '';
+        } else if (typeof answer === 'boolean') {
+          const booleanAnswer: boolean = answer as boolean;
+          apiAnswers[q.id!] = booleanAnswer ? 'true' : 'false';
         } else {
-          apiAnswers[q.id!] = a as string;
+          const textAnswer: string = answer as string;
+          apiAnswers[q.id!] = textAnswer;
         }
       });
       const { error } = await submitAnswers(gameId, apiAnswers, false);
@@ -190,7 +317,9 @@ function GameQuestionScreen({ route, navigation }: GameQuestionScreenProps) {
   }
 
   const q = questions[current];
+
   const answer = answers[q.id!] ?? (q.question_type === 'multiple_choice' && q.allow_multiple_selection ? [] : '');
+  const mediaFile = mediaFiles[q.id!] || null;
 
   return (
     <LinearGradient colors={[Purple, PurpleLight]} style={styles.container}>
@@ -200,76 +329,129 @@ function GameQuestionScreen({ route, navigation }: GameQuestionScreenProps) {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-            <Text style={styles.progressText}>{current + 1} / {questions.length}</Text>
+            <Text style={styles.progressText}>
+              {current + 1} / {questions.length}
+              {(() => {
+                const answeredCount: number = questions.filter((q: GameQuestion): boolean => {
+                  const answer: AnswerValue = answers[q.id!];
+                  const mediaFile: MediaFile | null = mediaFiles[q.id!];
+                  
+                  // For premium games, media is sufficient
+                  if (game?.is_paid === 'premium' && mediaFile) {
+                    return true;
+                  }
+                  
+                  // For all other cases, validate based on question type
+                  if (q.question_type === 'text') {
+                    const textAnswer: string = answer as string;
+                    return Boolean(textAnswer && textAnswer.trim() !== '');
+                  } else if (q.question_type === 'true_false') {
+                    const booleanAnswer: boolean = answer as boolean;
+                    return typeof booleanAnswer === 'boolean';
+                  } else if (q.question_type === 'multiple_choice') {
+                    if (q.allow_multiple_selection) {
+                      const arrayAnswer: string[] = answer as string[];
+                      return Boolean(Array.isArray(arrayAnswer) && arrayAnswer.length > 0);
+                    } else {
+                      const singleAnswer: string = answer as string;
+                      return Boolean(singleAnswer && singleAnswer.trim() !== '');
+                    }
+                  }
+                  return false;
+                }).length;
+                return ` (${answeredCount} answered)`;
+              })()}
+            </Text>
             <Text style={styles.questionText}>{q.question_text}</Text>
             {q.question_type === 'text' && (
-              <TextInput
-                style={styles.textInput}
-                value={typeof answer === 'string' ? answer : ''}
-                onChangeText={handleAnswerChange}
-                placeholder="Type your answer..."
-                placeholderTextColor="#999"
-                multiline
-                accessibilityLabel="Text answer input"
-              />
+              <>
+                <TextInput
+                  style={styles.textInput}
+                  value={typeof answer === 'string' ? answer : ''}
+                  onChangeText={handleAnswerChange}
+                  placeholder="Type your answer..."
+                  placeholderTextColor="#999"
+                  multiline
+                  accessibilityLabel="Text answer input"
+                />
+                <MediaUpload
+                  onMediaSelect={handleMediaSelect}
+                  selectedMedia={mediaFile}
+                  isPremium={game?.is_paid === 'premium'}                  
+                />
+              </>
             )}
             {q.question_type === 'true_false' && (
-              <View style={styles.booleanContainer}>
-                <TouchableOpacity
-                  style={[styles.booleanButton, answer === true && styles.booleanButtonActive]}
-                  onPress={() => handleAnswerChange(true)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Answer True"
-                >
-                  <Text style={[styles.booleanButtonText, answer === true && styles.booleanButtonTextActive]}>True</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.booleanButton, answer === false && styles.booleanButtonActive]}
-                  onPress={() => handleAnswerChange(false)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Answer False"
-                >
-                  <Text style={[styles.booleanButtonText, answer === false && styles.booleanButtonTextActive]}>False</Text>
-                </TouchableOpacity>
-              </View>
+              <>
+                <View style={styles.booleanContainer}>
+                  <TouchableOpacity
+                    style={[styles.booleanButton, answer === true && styles.booleanButtonActive]}
+                    onPress={() => handleAnswerChange(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Answer True"
+                  >
+                    <Text style={[styles.booleanButtonText, answer === true && styles.booleanButtonTextActive]}>True</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.booleanButton, answer === false && styles.booleanButtonActive]}
+                    onPress={() => handleAnswerChange(false)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Answer False"
+                  >
+                    <Text style={[styles.booleanButtonText, answer === false && styles.booleanButtonTextActive]}>False</Text>
+                  </TouchableOpacity>
+                </View>
+                <MediaUpload
+                  onMediaSelect={handleMediaSelect}
+                  selectedMedia={mediaFile}
+                  isPremium={game?.is_paid === 'premium'}
+                />
+              </>
             )}
             {q.question_type === 'multiple_choice' && q.multiple_choice_options && (
-              <View style={styles.choicesContainer}>
-                {q.multiple_choice_options.map((option, idx) => {
-                  if (q.allow_multiple_selection) {
-                    const selected = Array.isArray(answer) && answer.includes(option);
+              <>
+                <View style={styles.choicesContainer}>
+                  {q.multiple_choice_options.map((option, idx) => {
+                    if (q.allow_multiple_selection) {
+                      const selected = Array.isArray(answer) && answer.includes(option);
+                      return (
+                        <TouchableOpacity
+                          key={option}
+                          style={[styles.choiceButton, selected && styles.choiceButtonActive]}
+                          onPress={() => {
+                            if (!Array.isArray(answer)) return handleAnswerChange([option]);
+                            if (selected) handleAnswerChange(answer.filter((a: string) => a !== option));
+                            else handleAnswerChange([...answer, option]);
+                          }}
+                          accessibilityRole="checkbox"
+                          accessibilityState={{ checked: selected }}
+                          accessibilityLabel={option}
+                        >
+                          <Text style={[styles.choiceButtonText, selected && styles.choiceButtonTextActive]}>{option}</Text>
+                        </TouchableOpacity>
+                      );
+                    }
+                    const selected = answer === option;
                     return (
                       <TouchableOpacity
                         key={option}
                         style={[styles.choiceButton, selected && styles.choiceButtonActive]}
-                        onPress={() => {
-                          if (!Array.isArray(answer)) return handleAnswerChange([option]);
-                          if (selected) handleAnswerChange(answer.filter((a: string) => a !== option));
-                          else handleAnswerChange([...answer, option]);
-                        }}
-                        accessibilityRole="checkbox"
-                        accessibilityState={{ checked: selected }}
+                        onPress={() => handleAnswerChange(option)}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected }}
                         accessibilityLabel={option}
                       >
                         <Text style={[styles.choiceButtonText, selected && styles.choiceButtonTextActive]}>{option}</Text>
                       </TouchableOpacity>
                     );
-                  }
-                  const selected = answer === option;
-                  return (
-                    <TouchableOpacity
-                      key={option}
-                      style={[styles.choiceButton, selected && styles.choiceButtonActive]}
-                      onPress={() => handleAnswerChange(option)}
-                      accessibilityRole="radio"
-                      accessibilityState={{ selected }}
-                      accessibilityLabel={option}
-                    >
-                      <Text style={[styles.choiceButtonText, selected && styles.choiceButtonTextActive]}>{option}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+                  })}
+                </View>
+                <MediaUpload
+                  onMediaSelect={handleMediaSelect}
+                  selectedMedia={mediaFile}
+                  isPremium={game?.is_paid === 'premium'}
+                />
+              </>
             )}
             <View style={styles.navButtons}>
               <TouchableOpacity
@@ -283,7 +465,9 @@ function GameQuestionScreen({ route, navigation }: GameQuestionScreenProps) {
                 onPress={handleNext}
                 disabled={saving}
               >
-                <Text style={styles.navButtonText}>{current === questions.length - 1 ? 'Finish' : 'Next'}</Text>
+                <Text style={styles.navButtonText}>
+                  {current === questions.length - 1 ? 'Finish' : 'Next'}
+                </Text>
               </TouchableOpacity>
             </View>
             {error && <Text style={styles.errorText}>{error}</Text>}
