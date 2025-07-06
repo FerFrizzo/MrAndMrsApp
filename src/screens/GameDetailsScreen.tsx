@@ -15,7 +15,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/RootStackParamList';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Purple, PurpleLight, getStatusColor } from '../utils/Colors';
-import { getGameWithQuestions, sendGameInvite, updateQuestion, deleteQuestion, createQuestion, updateGame, createOrUpdateGame } from '../services/gameService';
+import { getGameWithQuestions, sendGameInvite, updateQuestion, deleteQuestion, createQuestion, updateGameName, updateGameData, updateGameStatusAndIsPaid } from '../services/gameService';
 import { GameData, GameQuestion, GAME_STATUS_MAP, getStatusLabel } from '../types/GameData';
 import { AntDesign, MaterialCommunityIcons, Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import MultipleChoiceEditor from '../components/MultipleChoiceEditor';
@@ -273,11 +273,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
                 await openPaymentSheet(199);
 
                 // Update game with paid status after successful payment
-                const { error } = await createOrUpdateGame({
-                  ...game,
-                  status: "ready_to_play",
-                  is_paid: 'basic',
-                }, game.id);
+                const { error } = await updateGameStatusAndIsPaid("ready_to_play", 'basic', game.id);
 
                 if (error) throw error;
 
@@ -299,12 +295,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
                 await openPaymentSheet(299);
 
                 // Update game with paid status after successful payment
-                const { error } = await createOrUpdateGame({
-                  ...game,
-                  status: "ready_to_play",
-                  is_paid: 'premium',
-                }, game.id);
-
+                const { error } = await updateGameStatusAndIsPaid("ready_to_play", 'premium', game.id);
                 if (error) throw error;
 
                 showToast('Payment successful! Premium game is ready to play.', 'success');
@@ -703,7 +694,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
                   style={styles.playButton}
                   onPress={async () => {
                     if (game && game.status !== 'playing') {
-                      await updateGame(game.id!, { status: 'playing' });
+                      await updateGameName(game.id!, { status: 'playing' });
                     }
                     navigation.navigate('GameQuestion', { gameId });
                   }}

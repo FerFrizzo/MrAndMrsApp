@@ -278,7 +278,6 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
                 partner_interviewed_name: partnerInterviewedName.trim(),
                 partner_playing_email: partnerPlayingEmail.trim() || undefined,
                 partner_playing_name: partnerPlayingName.trim() || undefined,
-                // questions,
                 status: "ready_to_play",
                 is_paid: isPremium ? 'premium' : 'basic',
               }, gameId);

@@ -15,76 +15,6 @@ import {
 import { uploadMediaToSupabase } from './mediaService';
 import { Platform } from "react-native"
 
-// // Create a new game
-// export const createGame = async (gameData: GameData): Promise<GameResponse> => {
-//   try {
-//     const { data: { user } } = await supabase.auth.getUser()
-
-//     if (!user) throw new Error('User not authenticated')
-
-//     // Insert the game
-//     const { data: game, error: gameError } = await supabase
-//       .from('games')
-//       .insert({
-//         creator_id: user.id,
-//         partner_interviewed_email: gameData.partner_interviewed_email,
-//         partner_interviewed_name: gameData.partner_interviewed_name,
-//         partner_playing_email: gameData.partner_playing_email,
-//         partner_playing_name: gameData.partner_playing_name,
-//         game_name: gameData.game_name,
-
-//         is_premium: gameData.is_premium || false,
-//         status: 'in_creation',
-//       })
-//       .select()
-//       .single()
-
-//     if (gameError) throw gameError
-
-//     // If there are questions, insert them
-//     if (gameData.questions && gameData.questions.length > 0) {
-
-//       const questionsToInsert = gameData.questions.map((q, index) => ({
-//         game_id: game.id,
-//         question_text: q.question_text,
-//         question_type: q.question_type || 'text',
-//         order_num: index + 1,
-//         multiple_choice_options: q.multiple_choice_options || null,
-//         allow_multiple_selection: q.allow_multiple_selection || false
-//       }))
-
-//       const { error: questionsError } = await supabase
-//         .from('questions')
-//         .insert(questionsToInsert)
-
-//       if (questionsError) throw questionsError
-//     }
-
-//     return { game, error: null }
-//   } catch (error) {
-//     console.error('Error creating game:', error)
-//     return { game: null, error: error instanceof Error ? error : new Error(String(error)) }
-//   }
-// }
-
-// // Get games created by the current user
-// export const getCreatedGames = async (): Promise<GamesResponse> => {
-//   try {
-//     const { data: games, error } = await supabase
-//       .from('games')
-//       .select(`
-//         *,
-//         questions:questions(count)
-//       `)
-//       .order('created_at', { ascending: false })
-
-//     if (error) throw error
-//     return { games, error: null }
-//   } catch (error) {
-//     return { games: null, error: error instanceof Error ? error : new Error(String(error)) }
-//   }
-// }
-
 // Get a specific game with its questions
 export const getGameWithQuestions = async (gameId: string): Promise<GameResponse> => {
   try {
@@ -113,7 +43,7 @@ export const getGameWithQuestions = async (gameId: string): Promise<GameResponse
 }
 
 // Update a game
-export const updateGame = async (gameId: string, gameData: Partial<GameData>): Promise<ErrorResponse> => {
+export const updateGameName = async (gameId: string, gameData: Partial<GameData>): Promise<ErrorResponse> => {
   try {
     const { error } = await supabase
       .from('games')
@@ -799,19 +729,61 @@ export async function updateGameData(gameData: GameData, gameId?: string) {
       updated_at: new Date().toISOString(),
       created_at: existingGame?.created_at || new Date().toISOString(),
     }
-
+    
     const { data, error } = await supabase
       .from('games')
       .update(objectToUpsert)
       .eq('id', gameId)
       .select()
       .single();
+    
+      if (error) throw error;
 
+    return { game: data, error: null };
+  } catch (error: any) {
+    console.error('Error in updateGameData:', error.message);
+    return { game: null, error };
+  }
+}
+
+
+
+export async function updateGameStatusAndIsPaid(status: string, isPaid: IsPaid, gameId?: string) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+
+    const { data: existingGame, error: fetchError } = gameId
+      ? await supabase
+        .from('games')
+        .select('*')
+        .eq('id', gameId)
+        .single()
+      : { data: null, error: null };
+
+    if (fetchError && gameId) {
+      throw fetchError;
+    }
+
+    const objectToUpsert = {
+      creator_id: user?.id,
+      status,
+      is_paid: isPaid,
+      updated_at: new Date().toISOString(),
+      created_at: existingGame?.created_at || new Date().toISOString(),
+    }
+    
+    const { data, error } = await supabase
+      .from('games')
+      .update(objectToUpsert)
+      .eq('id', gameId)
+      .select()
+      .single();
+    
     if (error) throw error;
 
     return { game: data, error: null };
   } catch (error: any) {
-    console.error('Error in createOrUpdateGame:', error.message);
+    console.error('Error in updateGameData:', error.message);
     return { game: null, error };
   }
 }
