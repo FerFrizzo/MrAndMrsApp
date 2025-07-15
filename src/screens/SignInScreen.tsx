@@ -21,6 +21,7 @@ import { AntDesign } from '@expo/vector-icons';
 import { signInWithEmail } from '../services/authService';
 import SignInWithGoogle from '../components/SignInWithGoogle';
 import { useToast } from '../contexts/ToastContext';
+import SignInWithGoogleReactNative from '../components/SignInWithGoogleReactNative';
 
 type SignInScreenProps = NativeStackScreenProps<RootStackParamList, 'SignIn'>;
 
@@ -131,7 +132,7 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
                 </Text>
               </TouchableOpacity>
 
-              {/* <View style={styles.separatorContainer}>
+              <View style={styles.separatorContainer}>
                 <View style={styles.separatorLine} />
                 <Text style={styles.orText}>Or sign in with</Text>
                 <View style={styles.separatorLine} />
@@ -142,12 +143,15 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
                   <SignInWithGoogle navigation={navigation} />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.socialButton}>
+                  <SignInWithGoogleReactNative />
+                </TouchableOpacity>
+                {/* <TouchableOpacity style={styles.socialButton}>
                   <AntDesign name="facebook-square" size={24} color="#4285F4" />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.socialButton}>
                   <AntDesign name="apple1" size={24} color="black" />
-                </TouchableOpacity>
-              </View> */}
+                </TouchableOpacity> */}
+              </View>
             </View>
           </View>
         </KeyboardAvoidingView>
