@@ -11,7 +11,13 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.ferfrizzo.MrAndMrsApp",
-      "googleServicesFile": "./GoogleService-Info.plist"
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "buildNumber": "1",
+      "infoPlist": {
+        "CFBundleDisplayName": "Mr and Mrs",
+        "CFBundleName": "Mr and Mrs",
+        "NSUserTrackingUsageDescription": "This app does not track users across other companies' apps or websites."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -41,6 +47,11 @@
       ],
       "expo-video",
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "a04025c1-e8d5-482c-a492-13efaffabbf0"
+      }
+    }
   }
 }
