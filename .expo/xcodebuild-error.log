@@ -2,6 +2,7 @@
 
 
 The following build commands failed:
-	ScanDependencies /Users/ferfrizzo/Library/Developer/Xcode/DerivedData/MrAndMrsApp-bbjyuynnjqtubffyswfpthzalsuq/Build/Intermediates.noindex/Pods.build/Debug-iphonesimulator/gRPC-C++.build/Objects-normal/x86_64/gRPC-C++-dummy.o /Users/ferfrizzo/coding/sideHustles/MrAndMrsApp/ios/Pods/Target\ Support\ Files/gRPC-C++/gRPC-C++-dummy.m normal x86_64 objective-c com.apple.compilers.llvm.clang.1_0.compiler (in target 'gRPC-C++' from project 'Pods')
-	Building workspace MrAndMrsApp with scheme MrAndMrsApp and configuration Debug
-(2 failures)
+	ScanDependencies /Users/ferfrizzo/Library/Developer/Xcode/DerivedData/MrAndMrsApp-bbjyuynnjqtubffyswfpthzalsuq/Build/Intermediates.noindex/Pods.build/Release-iphonesimulator/gRPC-C++.build/Objects-normal/x86_64/gRPC-C++-dummy.o /Users/ferfrizzo/coding/sideHustles/MrAndMrsApp/ios/Pods/Target\ Support\ Files/gRPC-C++/gRPC-C++-dummy.m normal x86_64 objective-c com.apple.compilers.llvm.clang.1_0.compiler (in target 'gRPC-C++' from project 'Pods')
+	ScanDependencies /Users/ferfrizzo/Library/Developer/Xcode/DerivedData/MrAndMrsApp-bbjyuynnjqtubffyswfpthzalsuq/Build/Intermediates.noindex/Pods.build/Release-iphonesimulator/gRPC-C++.build/Objects-normal/arm64/gRPC-C++-dummy.o /Users/ferfrizzo/coding/sideHustles/MrAndMrsApp/ios/Pods/Target\ Support\ Files/gRPC-C++/gRPC-C++-dummy.m normal arm64 objective-c com.apple.compilers.llvm.clang.1_0.compiler (in target 'gRPC-C++' from project 'Pods')
+	Building workspace MrAndMrsApp with scheme MrAndMrsApp and configuration Release
+(3 failures)

@@ -7,7 +7,7 @@
     "orientation": "portrait",
     "icon": "./assets/logo.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.ferfrizzo.MrAndMrsApp",
@@ -16,7 +16,8 @@
       "infoPlist": {
         "CFBundleDisplayName": "Mr and Mrs",
         "CFBundleName": "Mr and Mrs",
-        "NSUserTrackingUsageDescription": "This app does not track users across other companies' apps or websites."
+        "NSUserTrackingUsageDescription": "This app does not track users across other companies' apps or websites.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -46,7 +47,8 @@
         }
       ],
       "expo-video",
-      "expo-font"
+      "expo-font",
+      "expo-asset"
     ],
     "extra": {
       "eas": {

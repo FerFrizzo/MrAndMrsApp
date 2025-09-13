@@ -20,8 +20,8 @@ yarn-error.log*
 /android/gradle.properties
 
 # Firebase config
-google-services.json
-GoogleService-Info.plist
+# google-services.json
+# GoogleService-Info.plist
 
 # Android keystore
 android/app/*.keystore

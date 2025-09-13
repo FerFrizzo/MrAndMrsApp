@@ -13,15 +13,8 @@ install! 'cocoapods',
 
 prepare_react_native_project!
 
-# linkage = ENV['USE_FRAMEWORKS']
-# if linkage != nil
-#   Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
-#   use_frameworks! :linkage => linkage.to_sym
-# end
-
-target 'MrAndMrsApp' do
+target 'MrandMrs' do
   use_expo_modules!
-  use_modular_headers!
 
   if ENV['EXPO_USE_COMMUNITY_AUTOLINKING'] == '1'
     config_command = ['node', '-e', "process.argv=['', '', 'config'];require('@react-native-community/cli').run()"];
@@ -51,42 +44,6 @@ target 'MrAndMrsApp' do
     :privacy_file_aggregation_enabled => podfile_properties['apple.privacyManifestAggregationEnabled'] != 'false',
   )
 
-  pod 'FirebaseAuth', :modular_headers => true
-  pod 'FirebaseFirestore', :modular_headers => true
-  pod 'FirebaseStorage', :modular_headers => true
-  pod 'FirebaseCore', :modular_headers => true
-  pod 'FirebaseAppCheckInterop', :modular_headers => true
-  pod 'FirebaseAuthInterop', :modular_headers => true
-  pod 'FirebaseCoreExtension', :modular_headers => true
-  pod 'FirebaseFirestoreInternal', :modular_headers => true
-  pod 'FirebaseCoreInternal', :modular_headers => true
-  pod 'GoogleUtilities', :modular_headers => true
-  pod 'RecaptchaInterop', :modular_headers => true
-
-  # use_react_native!(
-  #   :path => "../node_modules/react-native",
-  #   :hermes_enabled => true,
-  #   :app_path => "#{Pod::Config.instance.installation_root}/.."
-  # )
-
-  # post_install do |installer|
-  #   react_native_post_install(installer)
-
-  #   # Fix gRPC modulemap issue
-  #   installer.pods_project.targets.each do |target|
-  #     if target.name == 'gRPC-Core'
-  #       target.build_configurations.each do |config|
-  #         config.build_settings['MODULEMAP_FILE'] = "#{Pod::Config.instance.installation_root}/Pods/gRPC-Core/include/grpc/module.modulemap"
-  #       end
-  #     end
-  #     # Fix for Xcode 15
-  #     if target.respond_to?(:product_type) and target.product_type == "com.apple.product-type.bundle"
-  #       target.build_configurations.each do |config|
-  #         config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
-  #       end
-  #     end
-  #   end
-  # end
   post_install do |installer|
     react_native_post_install(
       installer,
