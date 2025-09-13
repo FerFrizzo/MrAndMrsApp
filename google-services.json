@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "202253932835",
+    "project_id": "mrandmrs-ee59f",
+    "storage_bucket": "mrandmrs-ee59f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:202253932835:android:1607d7320970f41a01d496",
+        "android_client_info": {
+          "package_name": "com.ferfrizzo.MrAndMrsApp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "202253932835-t9lc4fikcp4johm52pc7j0kl4tudqoej.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ferfrizzo.MrAndMrsApp",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "202253932835-3ssd07ci50ffel481j4i4iep2khtc4v2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBqRyWagM96o4E9-vEJaaoj0_UEXbu6HSs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "202253932835-3ssd07ci50ffel481j4i4iep2khtc4v2.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "202253932835-2s67vi88rub1k6umj51tjec25227m163.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.ferfrizzo.MrAndMrsApp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
