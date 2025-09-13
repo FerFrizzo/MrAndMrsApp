@@ -16,7 +16,6 @@
       "infoPlist": {
         "CFBundleDisplayName": "Mr and Mrs",
         "CFBundleName": "Mr and Mrs",
-        "NSUserTrackingUsageDescription": "This app does not track users across other companies' apps or websites.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
