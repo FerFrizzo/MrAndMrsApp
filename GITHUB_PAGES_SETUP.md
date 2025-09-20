@@ -21,7 +21,19 @@ The following files have been created for your GitHub Pages site:
 4. Under **Source**, select **GitHub Actions**
 5. Save the settings
 
-### 2. Configure Custom Domain (Optional)
+### 2. Configure Environment Protection Rules
+
+If you get the error "Branch 'main' is not allowed to deploy to github-pages due to environment protection rules":
+
+1. Go to **Settings** → **Environments**
+2. Click on **github-pages** environment
+3. Under **Environment protection rules**:
+   - **Required reviewers**: Leave unchecked (or add yourself if you want manual approval)
+   - **Wait timer**: Set to 0 minutes
+   - **Deployment branches**: Select "All branches" or "Selected branches" and add "main"
+4. Click **Save protection rules**
+
+### 3. Configure Custom Domain (Optional)
 
 If you want to use your custom domain `mrandmrs.tech`:
 
@@ -31,7 +43,7 @@ If you want to use your custom domain `mrandmrs.tech`:
    - Add a CNAME record: `www` → `yourusername.github.io`
    - Add an A record: `@` → `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, `185.199.111.153`
 
-### 3. Update App Store Connect
+### 4. Update App Store Connect
 
 Once your GitHub Pages site is live, update your App Store Connect:
 
@@ -41,7 +53,7 @@ Once your GitHub Pages site is live, update your App Store Connect:
 4. Update the **Support URL** to: `https://yourusername.github.io/MrAndMrsApp/support.html`
    - Or if using custom domain: `https://mrandmrs.tech/support.html`
 
-### 4. Test the Setup
+### 5. Test the Setup
 
 1. Push your changes to the main branch
 2. GitHub Actions will automatically deploy your site
@@ -83,9 +95,32 @@ You can customize the pages by editing:
 
 ## Troubleshooting
 
+### "Branch 'main' is not allowed to deploy to github-pages due to environment protection rules"
+
+This is the most common error. To fix it:
+
+1. **Go to Repository Settings**:
+   - Navigate to your repository on GitHub
+   - Click **Settings** tab
+   - Click **Environments** in the left sidebar
+
+2. **Configure github-pages Environment**:
+   - Click on **github-pages** environment
+   - Under **Environment protection rules**:
+     - **Required reviewers**: Uncheck this (unless you want manual approval)
+     - **Wait timer**: Set to 0 minutes
+     - **Deployment branches**: Select "All branches" or "Selected branches" and add "main"
+   - Click **Save protection rules**
+
+3. **Alternative: Manual Deployment**:
+   - Go to **Actions** tab in your repository
+   - Find the "Deploy to GitHub Pages" workflow
+   - Click **Run workflow** button to manually trigger deployment
+
 ### GitHub Pages Not Updating
 - Check the Actions tab in your repository for deployment status
 - Ensure the workflow file is in the correct location: `.github/workflows/deploy-pages.yml`
+- Make sure environment protection rules are properly configured
 
 ### Custom Domain Not Working
 - Verify DNS settings are correct
