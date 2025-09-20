@@ -2,9 +2,18 @@ import 'react-native-url-polyfill/auto'
 import { createClient } from '@supabase/supabase-js'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
-// Add non-null assertions to ensure TypeScript knows these values exist
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
+// Safely get environment variables with fallbacks
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
+// Validate required environment variables
+if (!supabaseUrl) {
+  throw new Error('EXPO_PUBLIC_SUPABASE_URL environment variable is not set');
+}
+
+if (!supabaseAnonKey) {
+  throw new Error('EXPO_PUBLIC_SUPABASE_ANON_KEY environment variable is not set');
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {

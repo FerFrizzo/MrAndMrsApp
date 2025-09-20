@@ -24,6 +24,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(currentUser);
       } catch (error) {
         console.error('Error checking auth state:', error);
+        // Don't throw the error, just log it and continue
+        setUser(null);
       } finally {
         setIsLoading(false);
       }
@@ -34,7 +36,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Set up auth state listener
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        setUser(session?.user || null);
+        try {
+          setUser(session?.user || null);
+        } catch (error) {
+          console.error('Error in auth state change:', error);
+          setUser(null);
+        }
       }
     );
 

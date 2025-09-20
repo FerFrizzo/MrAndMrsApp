@@ -7,6 +7,7 @@ import AppNavigator from './src/navigation/AppNavigator';
 import { ToastProvider } from './src/contexts/ToastContext';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StripeProvider } from '@stripe/stripe-react-native';
+import { ErrorBoundary } from './src/components/ErrorBoundary';
 
 export default function App() {
   const [isAppReady, setIsAppReady] = useState(false);
@@ -20,11 +21,12 @@ export default function App() {
   }
 
   return (
-    <>
+    <ErrorBoundary>
       <StatusBar backgroundColor="#8A2BE2" translucent={false} />
       <StripeProvider
         publishableKey={process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || ''}
         urlScheme="mrandmrsapp"
+        merchantIdentifier="merchant.com.ferfrizzo.MrAndMrsApp"
       >
         <SafeAreaProvider>
           <ToastProvider>
@@ -34,7 +36,7 @@ export default function App() {
           </ToastProvider>
         </SafeAreaProvider>
       </StripeProvider>
-    </>
+    </ErrorBoundary>
   );
 }
 
