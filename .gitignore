@@ -1,5 +1,6 @@
 # === General ===
 node_modules/
+.expo/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -10,18 +11,12 @@ yarn-error.log*
 .DS_Store
 
 # === React Native ===
-/ios/Pods/
-/ios/build/
-/ios/DerivedData/
-/android/.gradle/
-/android/app/build/
-/android/build/
-/android/local.properties
-/android/gradle.properties
+/ios/
+/android/
 
 # Firebase config
-# google-services.json
-# GoogleService-Info.plist
+google-services.json
+GoogleService-Info.plist
 
 # Android keystore
 android/app/*.keystore
@@ -55,6 +50,7 @@ ios/Podfile.lock
 .idea/
 .vscode/
 *.log
+docs/
 
 # === Fastlane (if used) ===
 fastlane/report.xml
@@ -62,6 +58,9 @@ fastlane/screenshots/**/*.png
 fastlane/test_output
 
 # === Signing Configs (Never commit passwords) ===
-android/gradle.properties
 android/my-key.keystore
-android/gradle.properties
+
+# === Service Account Keys ===
+google-play-service-account.json
+*.p8
+*.pem
