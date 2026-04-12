@@ -1,0 +1,68 @@
+# === General ===
+node_modules/
+.expo/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.env
+.env.*
+
+# === macOS ===
+.DS_Store
+
+# === React Native ===
+/ios/
+/android/
+
+# Firebase config
+google-services.json
+GoogleService-Info.plist
+
+# Android keystore
+android/app/*.keystore
+
+# === Keystore (Sensitive) ===
+android/app/*.keystore
+android/keystores/
+*.jks
+
+# === Gradle & Java ===
+.gradle
+*.iml
+*.hprof
+build/
+captures/
+.externalNativeBuild
+
+# === Xcode ===
+*.xcworkspace
+*.xcodeproj/project.xcworkspace
+*.xcuserstate
+*.xcuserdata
+ios/*.xcodeproj/*
+ios/*.xcworkspace/*
+ios/Podfile.lock
+
+# === Misc ===
+/tmp
+*.swp
+*~.nib
+.idea/
+.vscode/
+*.log
+docs/
+
+# === Fastlane (if used) ===
+fastlane/report.xml
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# === Signing Configs (Never commit passwords) ===
+android/my-key.keystore
+
+# === Service Account Keys ===
+google-play-service-account.json
+*.p8
+*.pem
+
+CLAUDE.md
