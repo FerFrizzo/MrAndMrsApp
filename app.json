@@ -3,16 +3,16 @@
     "name": "Mr and Mrs",
     "slug": "MrAndMrsApp",
     "scheme": "mrandmrsapp",
-    "version": "1.0.0",
+    "version": "1.0.10",
     "orientation": "portrait",
     "icon": "./assets/logo.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.ferfrizzo.MrAndMrsApp",
-      "googleServicesFile": "./GoogleService-Info.plist",
-      "buildNumber": "1",
+      "usesAppleSignIn": true,
+      "buildNumber": "45",
       "infoPlist": {
         "CFBundleDisplayName": "Mr and Mrs",
         "CFBundleName": "Mr and Mrs",
@@ -36,15 +36,12 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.ferfrizzo.MrAndMrsApp",
-      "googleServicesFile": "./google-services.json"
+      "versionCode": 45
     },
     "web": {
       "favicon": "./assets/logo.png"
     },
     "plugins": [
-      "@react-native-firebase/app",
-      "@react-native-firebase/auth",
-      "@react-native-firebase/crashlytics",
       [
         "expo-build-properties",
         {
@@ -52,13 +49,21 @@
             "useFrameworks": "static"
           },
           "android": {
-            "kotlinVersion": "2.0.21"
+            "kotlinVersion": "2.0.21",
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36
           }
         }
       ],
       "expo-video",
-      "expo-font",
-      "expo-asset"
+      "expo-apple-authentication",
+      "./plugins/withGradleWrapper",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.202253932835-2s67vi88rub1k6umj51tjec25227m163"
+        }
+      ]
     ],
     "extra": {
       "eas": {

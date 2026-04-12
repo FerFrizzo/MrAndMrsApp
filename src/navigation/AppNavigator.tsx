@@ -2,12 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { ActivityIndicator, View, Text } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { supabase } from '../config/supabaseClient';
 import { Session } from '@supabase/supabase-js';
 import { RootStackParamList } from '../types/RootStackParamList';
-import { Purple } from '../utils/Colors';
-import { AntDesign, Ionicons } from '@expo/vector-icons';
 
 // Auth Screens
 import SignInScreen from '../screens/SignInScreen';
@@ -22,10 +20,6 @@ import GameQuestionScreen from '../screens/GameQuestionScreen';
 import ReviewAnswersScreen from '../screens/ReviewAnswersScreen';
 import GameResultScreen from '../screens/GameResultScreen';
 import AccountScreen from '../screens/AccountScreen';
-// Uncomment these when the screens are created
-// import ProfileScreen from '../screens/ProfileScreen';
-// import PlayGameScreen from '../screens/PlayGameScreen';
-// import ResultsScreen from '../screens/ResultsScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 const AuthStack = createStackNavigator<RootStackParamList>();
@@ -33,11 +27,7 @@ const MainStack = createStackNavigator<RootStackParamList>();
 
 // Auth Navigator
 const AuthNavigator = () => (
-  <AuthStack.Navigator
-    screenOptions={{
-      headerShown: false,
-    }}
-  >
+  <AuthStack.Navigator screenOptions={{ headerShown: false }}>
     <AuthStack.Screen name="SignIn" component={SignInScreen} />
     <AuthStack.Screen name="SignUp" component={SignUpScreen} />
     <AuthStack.Screen name="PasswordRecovery" component={PasswordRecoveryScreen} />
@@ -46,53 +36,17 @@ const AuthNavigator = () => (
 
 // Main App Navigator with Stack Navigator containing the screens
 const MainAppNavigator = () => (
-  <MainStack.Navigator>
-    <MainStack.Screen
-      name="Dashboard"
-      component={DashboardScreen}
-      options={{ headerShown: false }}
-    />
-    <MainStack.Screen
-      name="CreateGame"
-      component={CreateGameScreen}
-      options={{ headerShown: false }}
-    />
-    <MainStack.Screen
-      name="GameDetails"
-      component={GameDetailsScreen}
-      options={{ headerShown: false }}
-    />
-    <MainStack.Screen
-      name="GameQuestion"
-      component={GameQuestionScreen}
-      options={{ headerShown: false }}
-    />
-    <MainStack.Screen
-      name="ReviewAnswers"
-      component={ReviewAnswersScreen}
-      options={{ headerShown: false }}
-    />
-    <MainStack.Screen
-      name="GameResult"
-      component={GameResultScreen}
-      options={{ headerShown: false }}
-    />
-    <MainStack.Screen
-      name="Account"
-      component={AccountScreen}
-      options={{ headerShown: false }}
-    />
+  <MainStack.Navigator screenOptions={{ headerShown: false }}>
+    <MainStack.Screen name="Dashboard" component={DashboardScreen} />
+    <MainStack.Screen name="CreateGame" component={CreateGameScreen} />
+    <MainStack.Screen name="GameDetails" component={GameDetailsScreen} />
+    <MainStack.Screen name="GameQuestion" component={GameQuestionScreen} />
+    <MainStack.Screen name="ReviewAnswers" component={ReviewAnswersScreen} />
+    <MainStack.Screen name="GameResult" component={GameResultScreen} />
+    <MainStack.Screen name="Account" component={AccountScreen} />
     {/* Uncomment these when the screens are created
-    <MainStack.Screen 
-      name="PlayGame" 
-      component={PlayGameScreen}
-      options={{ title: 'Play Game' }}
-    />
-    <MainStack.Screen 
-      name="Results" 
-      component={ResultsScreen}
-      options={{ title: 'Results' }}
-    />
+    <MainStack.Screen name="PlayGame" component={PlayGameScreen} />
+    <MainStack.Screen name="Results" component={ResultsScreen} />
     */}
   </MainStack.Navigator>
 );

@@ -64,3 +64,5 @@ android/my-key.keystore
 google-play-service-account.json
 *.p8
 *.pem
+
+CLAUDE.md

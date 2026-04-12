@@ -1,48 +1,51 @@
-import React from "react";
-import { TouchableOpacity, StyleSheet, Alert } from "react-native";
-import { useAuth } from "../context/AuthContext";
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from "../types/RootStackParamList";
-import { AntDesign } from "@expo/vector-icons";
-import { signInWithProvider } from "../services/authService";
+import React from 'react';
+import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { AntDesign } from '@expo/vector-icons';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import { supabase } from '../config/supabaseClient';
 
-interface SignInWithGoogleProps {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'SignIn'>;
-}
-
-const SignInWithGoogle: React.FC<SignInWithGoogleProps> = ({ navigation }) => {
-  const { setUser } = useAuth();
-
-  const handleGoogleSignIn = async () => {
+const SignInWithGoogle: React.FC = () => {
+  const handlePress = async () => {
     try {
-      const { data, error } = await signInWithProvider('google');
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      const idToken = userInfo.data?.idToken;
+      if (!idToken) throw new Error('No ID token returned from Google');
 
-      if (error) {
-        throw error;
-      }
-
-    } catch (error: any) {
-      console.error("Error signing in with Google:", error);
-      Alert.alert('Sign In Failed', error.message || 'Failed to sign in with Google');
+      const { error } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: idToken,
+      });
+      if (error) throw error;
+    } catch (e: any) {
+      if (e.code === statusCodes.SIGN_IN_CANCELLED) return;
+      console.error('Google sign-in error:', e);
     }
   };
 
   return (
-    <TouchableOpacity
-      onPress={handleGoogleSignIn}
-      style={styles.googleButton}
-    >
-      <AntDesign name="google" size={24} color="#4285F4" />
+    <TouchableOpacity style={styles.button} onPress={handlePress} activeOpacity={0.85}>
+      <AntDesign name="google" size={20} color="#4285F4" />
+      <Text style={styles.text}>Continue with Google</Text>
     </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
-  googleButton: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
+  button: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: 'white',
+    borderRadius: 25,
+    height: 50,
+    width: '100%',
+  },
+  text: {
+    color: '#333',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

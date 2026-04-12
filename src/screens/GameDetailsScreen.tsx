@@ -6,11 +6,11 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  SafeAreaView,
   Share,
   Modal,
   TextInput,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/RootStackParamList';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,7 +21,7 @@ import { AntDesign, MaterialCommunityIcons, Ionicons, MaterialIcons, Feather } f
 import MultipleChoiceEditor from '../components/MultipleChoiceEditor';
 import { useToast } from '../contexts/ToastContext';
 import { supabase } from '../config/supabaseClient';
-import { openPaymentSheet } from '../services/paymentService';
+import { purchaseGame, getProductPrices } from '../services/paymentService';
 
 type GameDetailsScreenProps = NativeStackScreenProps<RootStackParamList, 'GameDetails' | 'GameQuestion'>;
 
@@ -260,17 +260,25 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
     }
 
     if (game.status !== 'ready_to_play') {
+      let prices: { basic: string; premium: string };
+      try {
+        prices = await getProductPrices();
+      } catch (e) {
+        showToast('Could not load prices. Please try again.', 'error');
+        return;
+      }
+
       showDialog(
         'Game Payment',
         'Choose your game plan to proceed:',
         [
           { text: 'Cancel', style: 'cancel', onPress: () => { } },
           {
-            text: 'Pay & Create Basic',
+            text: `Basic (${prices.basic})`,
             style: 'default',
             onPress: async () => {
               try {
-                await openPaymentSheet(199);
+                await purchaseGame('basic');
 
                 // Update game with paid status after successful payment
                 const { error } = await updateGameStatusAndIsPaid("ready_to_play", 'basic', game.id);
@@ -288,11 +296,11 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
             }
           },
           {
-            text: 'Pay & Create Premium',
+            text: `Premium (${prices.premium})`,
             style: 'default',
             onPress: async () => {
               try {
-                await openPaymentSheet(299);
+                await purchaseGame('premium');
 
                 // Update game with paid status after successful payment
                 const { error } = await updateGameStatusAndIsPaid("ready_to_play", 'premium', game.id);
@@ -531,7 +539,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
             style={styles.backButton}
             onPress={() => navigation.navigate('Dashboard')}
           >
-            <AntDesign name="arrowleft" size={24} color="white" />
+            <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Game Details</Text>
           <TouchableOpacity
@@ -547,7 +555,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.scrollView}>
+        <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingTop: 32 }}>
           {game && (
             <View style={styles.gameInfoContainer}>
               <View style={styles.titleRow}>
@@ -759,7 +767,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginVertical: 16,
+    marginBottom: 16,
   },
   gameTitle: {
     fontSize: 24,

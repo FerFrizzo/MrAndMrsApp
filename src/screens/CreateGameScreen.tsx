@@ -13,6 +13,7 @@ import {
   Keyboard,
   Share,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/RootStackParamList';
@@ -21,9 +22,8 @@ import { sendGameInvite, createOrUpdateGame, createQuestion, deleteQuestion, get
 import { GAME_STATUS_MAP, GameQuestion } from '../types/GameData';
 import MultipleChoiceEditor from '../components/MultipleChoiceEditor';
 import { useToast } from '../contexts/ToastContext';
-import { openPaymentSheet } from '../services/paymentService';
+import { purchaseGame, getProductPrices } from '../services/paymentService';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { PlatformPay, PlatformPayButton } from '@stripe/stripe-react-native';
 
 type CreateGameScreenProps = NativeStackScreenProps<RootStackParamList, 'CreateGame'>;
 
@@ -256,20 +256,27 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
       return;
     }
 
-    const price = isPremium ? 299 : 199;
+    let prices: { basic: string; premium: string };
+    try {
+      prices = await getProductPrices();
+    } catch (e) {
+      showToast('Could not load prices. Please try again.', 'error');
+      return;
+    }
+    const price = isPremium ? prices.premium : prices.basic;
 
     showDialog(
       'Create Game',
-      `Creating a ${isPremium ? 'premium game costs $2.99' : 'basic game costs $1.99'}. Do you want to proceed to payment?`,
+      `Creating a ${isPremium ? 'premium' : 'basic'} game costs ${price}. Do you want to proceed to payment?`,
       [
         { text: 'Cancel', style: 'cancel', onPress: () => { } },
         {
-          text: 'Pay & Create',
+          text: `Pay ${price} & Create`,
           style: 'default',
           onPress: async () => {
             try {
               setLoading(true);
-              await openPaymentSheet(price);
+              await purchaseGame(isPremium ? 'premium' : 'basic');
 
               // Update game with paid status after successful payment
               const { game, error } = await updateGameData({
@@ -374,113 +381,96 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
               keyboardType="email-address"
               autoCapitalize="none"
             />
-
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={styles.nextButton}
-                onPress={handleNext}
-              >
-                <Text style={styles.nextButtonText}>Next</Text>
-              </TouchableOpacity>
-            </View>
           </View>
         );
 
       case 2:
         return (
-          <View style={[styles.stepContainer, { flex: 1 }]}>
+          <View style={styles.stepContainer}>
             <Text style={styles.stepTitle}>Questions</Text>
             <Text style={styles.stepDescription}>
               Add questions {partnerInterviewedName} should answer before the game
             </Text>
-            <View style={{ flex: 1 }}>
-              <ScrollView
-                style={{ flex: 1 }}
-                contentContainerStyle={{ paddingBottom: 16 }}
-                keyboardShouldPersistTaps="handled"
-              >
-                {questions.map((question, index) => (
-                  <View key={index} style={styles.questionContainer}>
-                    <TextInput
-                      style={styles.questionInput}
-                      placeholder={`Question ${index + 1}`}
-                      placeholderTextColor="#A0A0A0"
-                      value={question.question_text}
-                      onChangeText={(text) => updateQuestion(index, text)}
-                      multiline
-                    />
+            {questions.map((question, index) => (
+              <View key={index} style={styles.questionContainer}>
+                <TextInput
+                  style={styles.questionInput}
+                  placeholder={`Question ${index + 1}`}
+                  placeholderTextColor="#A0A0A0"
+                  value={question.question_text}
+                  onChangeText={(text) => updateQuestion(index, text)}
+                  multiline
+                />
 
-                    <View style={styles.questionTypeContainer}>
-                      <Text style={styles.questionTypeLabel}>Question Type:</Text>
-                      <View style={styles.typeButtonsContainer}>
-                        <TouchableOpacity
-                          style={[
-                            styles.typeButton,
-                            question.question_type === 'text' && styles.typeButtonActive
-                          ]}
-                          onPress={() => updateQuestionType(index, 'text')}
-                        >
-                          <Text style={[
-                            styles.typeButtonText,
-                            question.question_type === 'text' && styles.typeButtonTextActive
-                          ]}>
-                            Text
-                          </Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          style={[
-                            styles.typeButton,
-                            question.question_type === 'multiple_choice' && styles.typeButtonActive
-                          ]}
-                          onPress={() => updateQuestionType(index, 'multiple_choice')}
-                        >
-                          <Text style={[
-                            styles.typeButtonText,
-                            question.question_type === 'multiple_choice' && styles.typeButtonTextActive
-                          ]}>
-                            Multiple Choice
-                          </Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          style={[
-                            styles.typeButton,
-                            question.question_type === 'true_false' && styles.typeButtonActive
-                          ]}
-                          onPress={() => updateQuestionType(index, 'true_false')}
-                        >
-                          <Text style={[
-                            styles.typeButtonText,
-                            question.question_type === 'true_false' && styles.typeButtonTextActive
-                          ]}>
-                            True/False
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-
-                    {question.question_type === 'multiple_choice' && (
-                      <MultipleChoiceEditor
-                        options={question.multiple_choice_options || []}
-                        allowsMultipleSelection={question.allow_multiple_selection || false}
-                        onOptionsChange={(options) => updateQuestionOptions(index, options)}
-                        onAllowsMultipleSelectionChange={(allows) => updateQuestionAllowsMultiple(index, allows)}
-                      />
-                    )}
+                <View style={styles.questionTypeContainer}>
+                  <Text style={styles.questionTypeLabel}>Question Type:</Text>
+                  <View style={styles.typeButtonsContainer}>
+                    <TouchableOpacity
+                      style={[
+                        styles.typeButton,
+                        question.question_type === 'text' && styles.typeButtonActive
+                      ]}
+                      onPress={() => updateQuestionType(index, 'text')}
+                    >
+                      <Text style={[
+                        styles.typeButtonText,
+                        question.question_type === 'text' && styles.typeButtonTextActive
+                      ]}>
+                        Text
+                      </Text>
+                    </TouchableOpacity>
 
                     <TouchableOpacity
-                      style={styles.removeButton}
-                      onPress={() => removeQuestion(index)}
-                      accessibilityLabel="Remove question"
-                      accessibilityRole="button"
+                      style={[
+                        styles.typeButton,
+                        question.question_type === 'multiple_choice' && styles.typeButtonActive
+                      ]}
+                      onPress={() => updateQuestionType(index, 'multiple_choice')}
                     >
-                      <MaterialCommunityIcons name="trash-can-outline" size={22} color="#FF3B30" />
+                      <Text style={[
+                        styles.typeButtonText,
+                        question.question_type === 'multiple_choice' && styles.typeButtonTextActive
+                      ]}>
+                        Multiple Choice
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.typeButton,
+                        question.question_type === 'true_false' && styles.typeButtonActive
+                      ]}
+                      onPress={() => updateQuestionType(index, 'true_false')}
+                    >
+                      <Text style={[
+                        styles.typeButtonText,
+                        question.question_type === 'true_false' && styles.typeButtonTextActive
+                      ]}>
+                        True/False
+                      </Text>
                     </TouchableOpacity>
                   </View>
-                ))}
-              </ScrollView>
-            </View>
+                </View>
+
+                {question.question_type === 'multiple_choice' && (
+                  <MultipleChoiceEditor
+                    options={question.multiple_choice_options || []}
+                    allowsMultipleSelection={question.allow_multiple_selection || false}
+                    onOptionsChange={(options) => updateQuestionOptions(index, options)}
+                    onAllowsMultipleSelectionChange={(allows) => updateQuestionAllowsMultiple(index, allows)}
+                  />
+                )}
+
+                <TouchableOpacity
+                  style={styles.removeButton}
+                  onPress={() => removeQuestion(index)}
+                  accessibilityLabel="Remove question"
+                  accessibilityRole="button"
+                >
+                  <MaterialCommunityIcons name="trash-can-outline" size={22} color="#FF3B30" />
+                </TouchableOpacity>
+              </View>
+            ))}
 
             <TouchableOpacity
               style={styles.addButton}
@@ -488,15 +478,6 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
             >
               <Text style={styles.addButtonText}>Add Question</Text>
             </TouchableOpacity>
-
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={styles.nextButton}
-                onPress={handleNext}
-              >
-                <Text style={styles.nextButtonText}>Next</Text>
-              </TouchableOpacity>
-            </View>
           </View>
         );
 
@@ -537,25 +518,6 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
               </Text>
             </View>
 
-            <View style={styles.buttonContainer}>
-                {/* <PlatformPayButton
-                    type={PlatformPay.ButtonType.Pay}
-                    onPress={handleCreateGame}
-                    style={{ width: '100%', height: 48, marginBottom: 16 }}
-                  /> */}
-
-              <TouchableOpacity
-                style={styles.nextButton}
-                onPress={() => handleCreateGame(isPremium)}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.nextButtonText}>Create Game</Text>
-                )}
-              </TouchableOpacity>
-            </View>
           </View>
         );
 
@@ -571,16 +533,19 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
     >
+      <SafeAreaView style={{ flex: 1 }}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.contentContainer}
       >
-        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
-        </TouchableOpacity>
+        <View style={styles.headerRow}>
+          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+            <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
+          </TouchableOpacity>
+        </View>
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={[styles.scrollContent, { flexGrow: 1, justifyContent: 'center', minHeight: '100%' }]}
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={true}
           keyboardShouldPersistTaps="handled"
         >
@@ -590,6 +555,21 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
             </View>
           </TouchableWithoutFeedback>
         </ScrollView>
+        <View style={styles.stickyFooter}>
+          <TouchableOpacity
+            style={styles.nextButton}
+            onPress={step === 3 ? () => handleCreateGame(isPremium) : handleNext}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color={Purple} />
+            ) : (
+              <Text style={styles.nextButtonText}>
+                {step === 3 ? 'Create Game' : 'Next'}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
         <View style={styles.stepsContainer}>
           {[1, 2, 3].map((item) => (
             <View
@@ -602,6 +582,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
           ))}
         </View>
       </KeyboardAvoidingView>
+      </SafeAreaView>
     </LinearGradient>
   );
 };
@@ -614,15 +595,20 @@ const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingBottom: 20,
-    paddingTop: 10,
+    paddingBottom: 4,
     justifyContent: 'space-between',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 16,
+    paddingBottom: 4,
   },
   stepsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    paddingVertical: 6,
-    marginTop: 6,
+    paddingVertical: 10,
+    marginTop: 0,
   },
   stepDot: {
     width: 10,
@@ -644,18 +630,18 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
-    paddingBottom: 20,
-    minHeight: '100%',
+    paddingBottom: 16,
+  },
+  stickyFooter: {
+    paddingHorizontal: 0,
+    paddingTop: 10,
+    paddingBottom: 12,
   },
   stepContainer: {
     padding: 0,
     width: '100%',
     maxWidth: 400,
     alignSelf: 'center',
-    flexGrow: 1,
-    justifyContent: 'center',
-    flex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -670,7 +656,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: 'white',
     marginTop: 0,
-    marginBottom: 32,
+    marginBottom: 16,
     alignSelf: 'center',
   },
   headerTitle: {
@@ -680,12 +666,14 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: 8,
+    marginLeft: -4,
   },
   stepDescription: {
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.8)',
-    marginBottom: 24,
+    marginBottom: 12,
     alignSelf: 'center',
+    textAlign: 'center',
   },
   label: {
     color: 'white',
@@ -708,9 +696,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   nextButton: {
-    flex: 1,
+    width: '100%',
     backgroundColor: 'white',
-    padding: 15,
+    paddingVertical: 15,
     borderRadius: 8,
     alignItems: 'center',
   },
@@ -721,26 +709,27 @@ const styles = StyleSheet.create({
   questionContainer: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 8,
-    padding: 15,
-    marginBottom: 16,
+    padding: 12,
+    marginBottom: 12,
     position: 'relative',
   },
   questionInput: {
     backgroundColor: 'white',
     borderRadius: 8,
     padding: 10,
+    paddingRight: 44,
     fontSize: 16,
     width: '100%',
     minHeight: 50,
   },
   removeButton: {
     position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    top: 12,
+    right: 12,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -834,37 +823,41 @@ const styles = StyleSheet.create({
   },
   questionTypeContainer: {
     flexDirection: 'column',
-    marginTop: 8,
+    marginTop: 10,
     marginBottom: 0,
   },
   questionTypeLabel: {
-    color: 'white',
-    fontSize: 14,
-    marginBottom: 8,
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 13,
+    marginBottom: 6,
   },
   typeButtonsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
     marginBottom: 5,
+    gap: 8,
   },
   typeButton: {
-    padding: 8,
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
     borderRadius: 8,
-    marginRight: 8,
-    marginBottom: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    alignItems: 'center',
+    minWidth: 72,
   },
   typeButtonActive: {
     backgroundColor: Purple,
   },
-  typeButtonText: {
-    color: 'white',
-    fontSize: 12,
-  },
   typeButtonTextActive: {
     color: 'white',
     fontWeight: 'bold',
+    textDecorationLine: 'underline',
+  },
+  typeButtonText: {
+    color: 'white',
+    fontSize: 13,
   },
 });
 

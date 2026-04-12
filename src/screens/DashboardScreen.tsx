@@ -3,13 +3,13 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
   RefreshControl,
   Modal,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/RootStackParamList';
 import { useAuth } from '../context/AuthContext';
@@ -24,6 +24,71 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Menu, Provider, Button } from 'react-native-paper';
 
 type DashboardScreenProps = NativeStackScreenProps<RootStackParamList, 'Dashboard'>;
+
+const HOW_TO_PLAY_STEPS = [
+  {
+    title: "Bridesmaid/Groomsman",
+    description: "1. Create a new game in the app\n2. Send the link to the partner who won't be at the party\n3. Wait for them to answer all questions\n4. Host the reveal party with the other partner!"
+  },
+  {
+    title: "Partner Answering",
+    description: "1. Get the link from your partner's friend\n2. Answer all questions honestly\n3. Submit your answers before the party\n4. Keep your answers secret!"
+  },
+  {
+    title: "Partner Playing",
+    description: "1. Come to the party\n2. Answer the same questions in front of everyone\n3. Watch as your answers are compared with your partner's\n4. Enjoy the fun and laughter!"
+  },
+  {
+    title: "Pro Tips!",
+    description: "• Mix fun and serious questions\n• Take videos of the reactions\n• Add a dare or challenge for each question answered incorrectly"
+  }
+];
+
+interface HowToPlayModalProps {
+  visible: boolean;
+  currentStep: number;
+  onNext: () => void;
+  onBack: () => void;
+  onClose: () => void;
+}
+
+const HowToPlayModal: React.FC<HowToPlayModalProps> = ({ visible, currentStep, onNext, onBack, onClose }) => (
+  <Modal
+    visible={visible}
+    animationType="slide"
+    transparent={true}
+    onRequestClose={onClose}
+  >
+    <View style={styles.modalOverlay}>
+      <View style={styles.modalContent}>
+        <Text style={styles.modalTitle}>
+          {HOW_TO_PLAY_STEPS[currentStep - 1].title}
+        </Text>
+        <Text style={styles.modalDescription}>
+          {HOW_TO_PLAY_STEPS[currentStep - 1].description}
+        </Text>
+        <View style={styles.modalButtons}>
+          {currentStep > 1 && (
+            <Button
+              mode="contained"
+              onPress={onBack}
+              style={styles.modalButton}
+            >
+              Back
+            </Button>
+          )}
+          <Button
+            mode="contained"
+            onPress={onNext}
+            style={styles.modalButton}
+          >
+            {currentStep === HOW_TO_PLAY_STEPS.length ? "Close" : "Next"}
+          </Button>
+        </View>
+      </View>
+    </View>
+  </Modal>
+);
 
 const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
   const { user } = useAuth();
@@ -80,81 +145,24 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
     navigation.navigate('CreateGame');
   };
 
-  const HowToPlayModal = () => {
-    const steps = [
-      {
-        title: "Bridesmaid/Groomsman",
-        description: "1. Create a new game in the app\n2. Send the link to the partner who won't be at the party\n3. Wait for them to answer all questions\n4. Host the reveal party with the other partner!"
-      },
-      {
-        title: "Partner Answering",
-        description: "1. Get the link from your partner's friend\n2. Answer all questions honestly\n3. Submit your answers before the party\n4. Keep your answers secret!"
-      },
-      {
-        title: "Partner Playing",
-        description: "1. Come to the party\n2. Answer the same questions in front of everyone\n3. Watch as your answers are compared with your partner's\n4. Enjoy the fun and laughter!"
-      },
-      {
-        title: "Pro Tips!",
-        description: "• Mix fun and serious questions\n• Take videos of the reactions\n• Add a dare or challenge for each question answered incorrectly"
-      }
-    ];
+  const handleHowToPlayNext = () => {
+    if (currentStep < HOW_TO_PLAY_STEPS.length) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      setHowToPlayVisible(false);
+      setCurrentStep(1);
+    }
+  };
 
-    const handleNext = () => {
-      if (currentStep < steps.length) {
-        setCurrentStep(currentStep + 1);
-      } else {
-        setHowToPlayVisible(false);
-        setCurrentStep(1);
-      }
-    };
+  const handleHowToPlayBack = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
 
-    const handleBack = () => {
-      if (currentStep > 1) {
-        setCurrentStep(currentStep - 1);
-      }
-    };
-
-    return (
-      <Modal
-        visible={howToPlayVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => {
-          setHowToPlayVisible(false);
-          setCurrentStep(1);
-        }}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>
-              {steps[currentStep - 1].title}
-            </Text>
-            <Text style={styles.modalDescription}>
-              {steps[currentStep - 1].description}
-            </Text>
-            <View style={styles.modalButtons}>
-              {currentStep > 1 && (
-                <Button
-                  mode="contained"
-                  onPress={handleBack}
-                  style={styles.modalButton}
-                >
-                  Back
-                </Button>
-              )}
-              <Button
-                mode="contained"
-                onPress={handleNext}
-                style={styles.modalButton}
-              >
-                {currentStep === steps.length ? "Close" : "Next"}
-              </Button>
-            </View>
-          </View>
-        </View>
-      </Modal>
-    );
+  const handleHowToPlayClose = () => {
+    setHowToPlayVisible(false);
+    setCurrentStep(1);
   };
 
   return (
@@ -196,14 +204,13 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
             </Menu>
           </View>
 
-          <TouchableOpacity
-            style={styles.createGameButton}
-            onPress={handleCreateGame}
-          >
-            <Text style={styles.createGameText}>Create New Game</Text>
-          </TouchableOpacity>
-
-          <HowToPlayModal />
+          <HowToPlayModal
+            visible={howToPlayVisible}
+            currentStep={currentStep}
+            onNext={handleHowToPlayNext}
+            onBack={handleHowToPlayBack}
+            onClose={handleHowToPlayClose}
+          />
 
           <ScrollView
             style={styles.content}
@@ -216,6 +223,13 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
               />
             }
           >
+            <TouchableOpacity
+              style={styles.createGameButton}
+              onPress={handleCreateGame}
+            >
+              <Text style={styles.createGameText}>Create New Game</Text>
+            </TouchableOpacity>
+
             {/* My Games Section */}
             <GamesSection
               title="My Games"
@@ -271,7 +285,8 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     padding: 20,
     alignItems: 'center',
-    marginVertical: 40,
+    marginTop: 28,
+    marginBottom: 24,
   },
   createGameText: {
     color: 'white',
