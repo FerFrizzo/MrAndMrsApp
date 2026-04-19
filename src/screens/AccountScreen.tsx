@@ -18,14 +18,18 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getUserProfile, UserProfile } from '../services/userService';
 import { useToast } from '../contexts/ToastContext';
+import { Dialog } from '../components/Dialog';
+import { deleteAccount, signOut } from '../services/authService';
 
 type AccountScreenProps = NativeStackScreenProps<RootStackParamList, 'Account'>;
 
 const AccountScreen: React.FC<AccountScreenProps> = ({ navigation }) => {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchUserProfile();
@@ -53,6 +57,25 @@ const AccountScreen: React.FC<AccountScreenProps> = ({ navigation }) => {
 
   const handleBack = () => {
     navigation.goBack();
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      const { error } = await deleteAccount();
+      if (error) {
+        console.error('deleteAccount error:', JSON.stringify(error));
+        showToast('Failed to delete account. Please try again.', 'error');
+        return;
+      }
+      await signOut();
+      setUser(null);
+    } catch (e) {
+      console.error('deleteAccount exception:', e);
+      showToast('An unexpected error occurred. Please try again.', 'error');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleContactSupport = async () => {
@@ -149,6 +172,21 @@ const AccountScreen: React.FC<AccountScreenProps> = ({ navigation }) => {
           </ScrollView>
 
           <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={() => setShowDeleteDialog(true)}
+            disabled={deleting}
+          >
+            {deleting ? (
+              <ActivityIndicator size="small" color="#FF3B30" />
+            ) : (
+              <>
+                <MaterialCommunityIcons name="delete-outline" size={24} color="#FF3B30" />
+                <Text style={styles.deleteButtonText}>Delete Account</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={styles.supportButton}
             onPress={handleContactSupport}
           >
@@ -157,6 +195,26 @@ const AccountScreen: React.FC<AccountScreenProps> = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </SafeAreaView>
+
+      <Dialog
+        visible={showDeleteDialog}
+        title="Delete Account"
+        message="This will permanently delete your account and all your data. This action cannot be undone."
+        type="warning"
+        onDismiss={() => setShowDeleteDialog(false)}
+        buttons={[
+          {
+            text: 'Delete Permanently',
+            style: 'destructive',
+            onPress: handleDeleteAccount,
+          },
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            onPress: () => setShowDeleteDialog(false),
+          },
+        ]}
+      />
     </LinearGradient>
   );
 };
@@ -248,6 +306,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: 'white',
     fontWeight: '500',
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255, 59, 48, 0.12)',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 22,
+    marginTop: 8,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 59, 48, 0.3)',
+  },
+  deleteButtonText: {
+    color: '#FF3B30',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
   supportButton: {
     flexDirection: 'row',
