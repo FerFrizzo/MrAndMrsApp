@@ -30,9 +30,11 @@ const SignInWithApple: React.FC = () => {
         nonce: hashedNonce,
       });
 
+      if (!credential.identityToken) throw new Error('Apple did not return an identity token.');
+
       const { error } = await supabase.auth.signInWithIdToken({
         provider: 'apple',
-        token: credential.identityToken!,
+        token: credential.identityToken,
         nonce: rawNonce,
       });
 
