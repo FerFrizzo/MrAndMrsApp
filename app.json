@@ -12,10 +12,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.ferfrizzo.MrAndMrsApp",
       "usesAppleSignIn": true,
-      "buildNumber": "45",
-      "entitlements": {
-        "com.apple.developer.Sign-in-with-Apple": "enabled"
-      },
+      "buildNumber": "46",
       "infoPlist": {
         "CFBundleDisplayName": "Mr and Mrs",
         "CFBundleName": "Mr and Mrs",
