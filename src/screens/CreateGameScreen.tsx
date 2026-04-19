@@ -1,4 +1,4 @@
-import React, { useState, useLayoutEffect } from 'react';
+import React, { useState, useLayoutEffect, useEffect } from 'react';
 import {
   View,
   Text,
@@ -53,6 +53,11 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
 
   // Game settings
   const [isPremium, setIsPremium] = useState(false);
+  const [prices, setPrices] = useState<{ basic: string; premium: string }>({ basic: '—', premium: '—' });
+
+  useEffect(() => {
+    getProductPrices().then(setPrices).catch(() => {});
+  }, []);
 
   const { showToast, showDialog } = useToast();
 
@@ -503,7 +508,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
             </View>
 
             <Text style={styles.premiumNote}>
-              Premium games cost $2.99 and allow you to answer questions with images and videos!
+              Premium games cost {prices.premium} and allow you to answer questions with images and videos!
             </Text>
 
             <View style={styles.summaryContainer}>
@@ -514,7 +519,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
               <Text style={styles.summaryItem}>Questions: {questions.length}</Text>
               <Text style={styles.summaryItem}>Type: {isPremium ? 'Premium' : 'Basic'}</Text>
               <Text style={styles.summaryItem}>
-                Price: {isPremium ? '$2.99' : '$1.99'}
+                Price: {isPremium ? prices.premium : prices.basic}
               </Text>
             </View>
 

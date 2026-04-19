@@ -13,6 +13,9 @@
       "bundleIdentifier": "com.ferfrizzo.MrAndMrsApp",
       "usesAppleSignIn": true,
       "buildNumber": "45",
+      "entitlements": {
+        "com.apple.developer.Sign-in-with-Apple": "enabled"
+      },
       "infoPlist": {
         "CFBundleDisplayName": "Mr and Mrs",
         "CFBundleName": "Mr and Mrs",
