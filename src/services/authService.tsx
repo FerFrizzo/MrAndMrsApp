@@ -79,6 +79,17 @@ export const getCurrentUser = async () => {
   }
 }
 
+// Delete the current user's account via Edge Function
+export const deleteAccount = async () => {
+  try {
+    const { error } = await supabase.functions.invoke('delete-account')
+    if (error) throw error
+    return { error: null }
+  } catch (error) {
+    return { error }
+  }
+}
+
 // Password reset
 export const resetPassword = async (email: string) => {
   try {
