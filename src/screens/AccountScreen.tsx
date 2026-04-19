@@ -64,12 +64,14 @@ const AccountScreen: React.FC<AccountScreenProps> = ({ navigation }) => {
     try {
       const { error } = await deleteAccount();
       if (error) {
+        console.error('deleteAccount error:', JSON.stringify(error));
         showToast('Failed to delete account. Please try again.', 'error');
         return;
       }
       await signOut();
       setUser(null);
-    } catch {
+    } catch (e) {
+      console.error('deleteAccount exception:', e);
       showToast('An unexpected error occurred. Please try again.', 'error');
     } finally {
       setDeleting(false);

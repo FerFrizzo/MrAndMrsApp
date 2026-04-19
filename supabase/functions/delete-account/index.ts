@@ -10,9 +10,11 @@ const corsHeaders = {
 }
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
 if (!SUPABASE_URL) throw new Error('SUPABASE_URL environment variable is not set')
+if (!SUPABASE_ANON_KEY) throw new Error('SUPABASE_ANON_KEY environment variable is not set')
 if (!SUPABASE_SERVICE_ROLE_KEY) throw new Error('SUPABASE_SERVICE_ROLE_KEY environment variable is not set')
 
 serve(async (req: Request) => {
@@ -30,7 +32,7 @@ serve(async (req: Request) => {
     }
 
     // Verify the user's JWT using a regular client
-    const userClient = createClient(SUPABASE_URL!, '', {
+    const userClient = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!, {
       global: { headers: { Authorization: authHeader } },
     })
     const { data: { user }, error: userError } = await userClient.auth.getUser()
