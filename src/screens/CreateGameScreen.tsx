@@ -22,7 +22,8 @@ import { sendGameInvite, createOrUpdateGame, createQuestion, deleteQuestion, get
 import { GAME_STATUS_MAP, GameQuestion } from '../types/GameData';
 import MultipleChoiceEditor from '../components/MultipleChoiceEditor';
 import { useToast } from '../contexts/ToastContext';
-import { purchaseGame, getProductPrices } from '../services/paymentService';
+import { getProductPrices } from '../services/paymentService';
+import { PaywallModal } from '../components/PaywallModal';
 import { useTranslation } from 'react-i18next';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -54,10 +55,11 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
 
   // Game settings
   const [isPremium, setIsPremium] = useState(false);
-  const [prices, setPrices] = useState<{ basic: string; premium: string }>({ basic: '—', premium: '—' });
+  const [premiumPrice, setPremiumPrice] = useState('—');
+  const [paywallVisible, setPaywallVisible] = useState(false);
 
   useEffect(() => {
-    getProductPrices().then(setPrices).catch(() => {});
+    getProductPrices().then(p => setPremiumPrice(p.premium)).catch(() => {});
   }, []);
 
   const { showToast, showDialog } = useToast();
@@ -252,84 +254,61 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
     }
   };
 
-  const handleCreateGame = async (isPremium: boolean) => {
-    if (questions.length === 0) {
-      showToast(t('createGame.atLeastOneQuestion'), 'error');
-      return;
-    }
-
+  const finalizeGame = async (tier: 'no' | 'premium') => {
     if (!gameId) {
       showToast(t('createGame.saveError'), 'error');
       return;
     }
-
-    let prices: { basic: string; premium: string };
     try {
-      prices = await getProductPrices();
-    } catch (e) {
-      showToast(t('createGame.priceLoadError'), 'error');
+      setLoading(true);
+      const { game, error } = await updateGameData({
+        game_name: gameName.trim(),
+        partner_interviewed_email: partnerInterviewedEmail.trim(),
+        partner_interviewed_name: partnerInterviewedName.trim(),
+        partner_playing_email: partnerPlayingEmail.trim() || undefined,
+        partner_playing_name: partnerPlayingName.trim() || undefined,
+        status: 'ready_to_play',
+        is_paid: tier,
+      }, gameId);
+
+      if (error) throw error;
+
+      if (game?.id) {
+        const { success: inviteSuccess, error: inviteError } = await sendGameInvite(game.id, partnerInterviewedEmail);
+        if (inviteError) {
+          showToast(t('createGame.gameCreatedInviteError', { error: inviteError.message }), 'warning');
+        } else if (inviteSuccess) {
+          try {
+            await Share.share({
+              message: t('createGame.shareMessage'),
+              title: t('createGame.shareTitle', { name: gameName }),
+            });
+          } catch {}
+          showToast(t('createGame.gameSaved'), 'success');
+        }
+      }
+      navigation.navigate('Dashboard');
+    } catch (error: any) {
+      showToast(error.message || t('createGame.paymentFailed'), 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateGame = () => {
+    if (questions.length === 0) {
+      showToast(t('createGame.atLeastOneQuestion'), 'error');
       return;
     }
-    const price = isPremium ? prices.premium : prices.basic;
-
-    showDialog(
-      t('createGame.paymentDialogTitle'),
-      t('createGame.paymentDialogBody', { tier: isPremium ? t('createGame.premium') : t('createGame.standard'), price }),
-      [
-        { text: t('createGame.paymentDialogCancel'), style: 'cancel', onPress: () => { } },
-        {
-          text: t('createGame.paymentDialogPay', { price }),
-          style: 'default',
-          onPress: async () => {
-            try {
-              setLoading(true);
-              await purchaseGame(isPremium ? 'premium' : 'basic');
-
-              // Update game with paid status after successful payment
-              const { game, error } = await updateGameData({
-                game_name: gameName.trim(),
-                partner_interviewed_email: partnerInterviewedEmail.trim(),
-                partner_interviewed_name: partnerInterviewedName.trim(),
-                partner_playing_email: partnerPlayingEmail.trim() || undefined,
-                partner_playing_name: partnerPlayingName.trim() || undefined,
-                status: "ready_to_play",
-                is_paid: isPremium ? 'premium' : 'basic',
-              }, gameId);
-
-              if (error) throw error;
-
-              // Send invitation email
-              if (game?.id) {
-                const { success: inviteSuccess, error: inviteError } = await sendGameInvite(game.id, partnerInterviewedEmail);
-
-                if (inviteError) {
-                  showToast(t('createGame.gameCreatedInviteError', { error: inviteError.message }), 'warning');
-                } else if (inviteSuccess) {
-                  try {
-                    await Share.share({
-                      message: t('createGame.shareMessage'),
-                      title: t('createGame.shareTitle', { name: gameName }),
-                    });
-                    navigation.navigate('Dashboard');
-                  } catch (shareError) {
-                    console.error('Share error:', shareError);
-                  }
-                  showToast(t('createGame.gameSaved'), 'success');
-                }
-              }
-
-              navigation.navigate('Dashboard');
-            } catch (error: any) {
-              console.error('Error:', error);
-              showToast(error.message || t('createGame.paymentFailed'), 'error');
-            } finally {
-              setLoading(false);
-            }
-          }
-        }
-      ],
-      'confirm'
-    );
+    if (!gameId) {
+      showToast(t('createGame.saveError'), 'error');
+      return;
+    }
+    if (isPremium) {
+      setPaywallVisible(true);
+    } else {
+      finalizeGame('no');
+    }
   };
 
   // Render different steps
@@ -510,7 +489,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
             </View>
 
             <Text style={styles.premiumNote}>
-              {t('createGame.premiumNote', { price: prices.premium })}
+              {t('createGame.premiumNote', { price: premiumPrice })}
             </Text>
 
             <View style={styles.summaryContainer}>
@@ -520,9 +499,9 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
               <Text style={styles.summaryItem}>{`${t('createGame.partnerPlaying')}: ${partnerPlayingEmail}`}</Text>
               <Text style={styles.summaryItem}>{`${t('createGame.questionsCount')}: ${questions.length}`}</Text>
               <Text style={styles.summaryItem}>{`${t('createGame.type')}: ${isPremium ? t('createGame.premium') : t('createGame.standard')}`}</Text>
-              <Text style={styles.summaryItem}>
-                {`${t('createGame.price')}: ${isPremium ? prices.premium : prices.basic}`}
-              </Text>
+              {isPremium && (
+                <Text style={styles.summaryItem}>{`${t('createGame.price')}: ${premiumPrice}`}</Text>
+              )}
             </View>
 
           </View>
@@ -565,7 +544,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
         <View style={styles.stickyFooter}>
           <TouchableOpacity
             style={styles.nextButton}
-            onPress={step === 3 ? () => handleCreateGame(isPremium) : handleNext}
+            onPress={step === 3 ? handleCreateGame : handleNext}
             disabled={loading}
           >
             {loading ? (
@@ -590,6 +569,18 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
         </View>
       </KeyboardAvoidingView>
       </SafeAreaView>
+      <PaywallModal
+        visible={paywallVisible}
+        onUpgradeSuccess={() => {
+          setPaywallVisible(false);
+          finalizeGame('premium');
+        }}
+        onContinueFree={() => {
+          setPaywallVisible(false);
+          setIsPremium(false);
+          finalizeGame('no');
+        }}
+      />
     </LinearGradient>
   );
 };

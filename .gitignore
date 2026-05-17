@@ -43,6 +43,9 @@ ios/*.xcodeproj/*
 ios/*.xcworkspace/*
 ios/Podfile.lock
 
+# === Worktrees ===
+.worktrees/
+
 # === Misc ===
 /tmp
 *.swp

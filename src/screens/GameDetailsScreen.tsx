@@ -21,7 +21,7 @@ import { AntDesign, MaterialCommunityIcons, Ionicons, MaterialIcons, Feather } f
 import MultipleChoiceEditor from '../components/MultipleChoiceEditor';
 import { useToast } from '../contexts/ToastContext';
 import { supabase } from '../config/supabaseClient';
-import { purchaseGame, getProductPrices } from '../services/paymentService';
+import { PaywallModal } from '../components/PaywallModal';
 import { useTranslation } from 'react-i18next';
 
 type GameDetailsScreenProps = NativeStackScreenProps<RootStackParamList, 'GameDetails' | 'GameQuestion'>;
@@ -47,6 +47,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
   const [targetStarted, setTargetStarted] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+  const [paywallVisible, setPaywallVisible] = useState(false);
   useEffect(() => {
     fetchGameDetails();
   }, [gameId]);
@@ -262,62 +263,30 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
     }
 
     if (game.status !== 'ready_to_play') {
-      let prices: { basic: string; premium: string };
-      try {
-        prices = await getProductPrices();
-      } catch (e) {
-        showToast(t('gameDetails.priceLoadError'), 'error');
-        return;
-      }
-
       showDialog(
         t('gameDetails.gamePayment'),
         t('gameDetails.gamePaymentBody'),
         [
-          { text: t('gameDetails.cancel'), style: 'cancel', onPress: () => { } },
+          { text: t('gameDetails.cancel'), style: 'cancel', onPress: () => {} },
           {
-            text: t('gameDetails.basicTier', { price: prices.basic }),
+            text: t('gameDetails.continueFree'),
             style: 'default',
             onPress: async () => {
               try {
-                await purchaseGame('basic');
-
-                // Update game with paid status after successful payment
-                const { error } = await updateGameStatusAndIsPaid("ready_to_play", 'basic', game.id);
-
+                const { error } = await updateGameStatusAndIsPaid('ready_to_play', 'no', game.id);
                 if (error) throw error;
-
                 showToast(t('gameDetails.paymentSuccessBasic'), 'success');
-
-                // Refresh game data
                 await fetchGameDetails();
               } catch (error: any) {
-                console.error('Error:', error);
                 showToast(error.message || t('common.error'), 'error');
               }
-            }
+            },
           },
           {
-            text: t('gameDetails.premiumTier', { price: prices.premium }),
+            text: t('gameDetails.upgradePremium'),
             style: 'default',
-            onPress: async () => {
-              try {
-                await purchaseGame('premium');
-
-                // Update game with paid status after successful payment
-                const { error } = await updateGameStatusAndIsPaid("ready_to_play", 'premium', game.id);
-                if (error) throw error;
-
-                showToast(t('gameDetails.paymentSuccessPremium'), 'success');
-
-                // Refresh game data
-                await fetchGameDetails();
-              } catch (error: any) {
-                console.error('Error:', error);
-                showToast(error.message || t('common.error'), 'error');
-              }
-            }
-          }
+            onPress: () => setPaywallVisible(true),
+          },
         ],
         'confirm'
       );
@@ -719,6 +688,31 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
       </SafeAreaView>
 
       {renderQuestionModal()}
+      <PaywallModal
+        visible={paywallVisible}
+        onUpgradeSuccess={async () => {
+          setPaywallVisible(false);
+          try {
+            const { error } = await updateGameStatusAndIsPaid('ready_to_play', 'premium', game?.id);
+            if (error) throw error;
+            showToast('Premium game is ready to play!', 'success');
+            await fetchGameDetails();
+          } catch (error: any) {
+            showToast(error.message || 'Failed to update game', 'error');
+          }
+        }}
+        onContinueFree={async () => {
+          setPaywallVisible(false);
+          try {
+            const { error } = await updateGameStatusAndIsPaid('ready_to_play', 'no', game?.id);
+            if (error) throw error;
+            showToast('Game is ready to play!', 'success');
+            await fetchGameDetails();
+          } catch (error: any) {
+            showToast(error.message || 'Failed to set up game', 'error');
+          }
+        }}
+      />
     </LinearGradient>
   );
 };

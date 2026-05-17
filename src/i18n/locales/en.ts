@@ -155,6 +155,8 @@ export default {
     premiumTier: 'Premium ({{price}})',
     saveQuestionError: 'An unexpected error occurred while saving the question',
     sendInviteError: 'Failed to send invitation',
+    continueFree: 'Continue Free',
+    upgradePremium: 'Upgrade to Premium',
   },
   account: {
     title: 'Account',

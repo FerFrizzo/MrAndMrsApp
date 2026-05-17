@@ -155,6 +155,8 @@ export default {
     premiumTier: 'Premium ({{price}})',
     saveQuestionError: 'Une erreur inattendue s\'est produite lors de l\'enregistrement de la question',
     sendInviteError: 'Échec de l\'envoi de l\'invitation',
+    continueFree: 'Continuer Gratuitement',
+    upgradePremium: 'Passer à Premium',
   },
   account: {
     title: 'Compte',

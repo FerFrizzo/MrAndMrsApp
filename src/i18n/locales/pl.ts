@@ -155,6 +155,8 @@ export default {
     premiumTier: 'Premium ({{price}})',
     saveQuestionError: 'Wystąpił nieoczekiwany błąd podczas zapisywania pytania',
     sendInviteError: 'Nie udało się wysłać zaproszenia',
+    continueFree: 'Kontynuuj za darmo',
+    upgradePremium: 'Przejdź na Premium',
   },
   account: {
     title: 'Konto',

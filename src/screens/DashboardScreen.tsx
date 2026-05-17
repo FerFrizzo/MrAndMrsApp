@@ -48,9 +48,9 @@ interface PricingModalProps {
 
 const PricingModal: React.FC<PricingModalProps> = ({ visible, onClose }) => {
   const { t } = useTranslation();
-  const [prices, setPrices] = useState<{ basic: string; premium: string } | null>(null);
+  const [premiumPrice, setPremiumPrice] = useState<string | null>(null);
   const [pricesLoading, setPricesLoading] = useState(false);
-  const [purchasing, setPurchasing] = useState<'basic' | 'premium' | null>(null);
+  const [purchasing, setPurchasing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchPrices = async () => {
@@ -58,7 +58,7 @@ const PricingModal: React.FC<PricingModalProps> = ({ visible, onClose }) => {
     setError(null);
     try {
       const p = await getProductPrices();
-      setPrices(p);
+      setPremiumPrice(p.premium);
     } catch (e) {
       setError(t('pricing.loadError'));
     } finally {
@@ -72,21 +72,20 @@ const PricingModal: React.FC<PricingModalProps> = ({ visible, onClose }) => {
     }
   }, [visible]);
 
-  const handleBuy = async (tier: 'basic' | 'premium') => {
-    setPurchasing(tier);
+  const handleBuy = async () => {
+    setPurchasing(true);
     try {
-      await purchaseGame(tier);
+      await purchaseGame();
     } catch (e: any) {
-      // User cancelled or sandbox error — silently ignore cancellations
       if (!e?.message?.includes('cancelled') && !e?.message?.includes('cancel')) {
         setError(e?.message || t('pricing.purchaseFailed'));
       }
     } finally {
-      setPurchasing(null);
+      setPurchasing(false);
     }
   };
 
-  const pricesUnavailable = prices && (prices.basic === '—' || prices.premium === '—');
+  const priceUnavailable = premiumPrice === '—';
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -119,9 +118,9 @@ const PricingModal: React.FC<PricingModalProps> = ({ visible, onClose }) => {
             </View>
           )}
 
-          {!pricesLoading && !error && prices && (
+          {!pricesLoading && !error && premiumPrice !== null && (
             <>
-              {pricesUnavailable && (
+              {priceUnavailable && (
                 <View style={pricingStyles.sandboxNote}>
                   <MaterialCommunityIcons name="information-outline" size={16} color="#8A4FFF" />
                   <Text style={pricingStyles.sandboxText}>
@@ -132,36 +131,18 @@ const PricingModal: React.FC<PricingModalProps> = ({ visible, onClose }) => {
 
               <View style={pricingStyles.tier}>
                 <View style={pricingStyles.tierInfo}>
-                  <Text style={pricingStyles.tierName}>{t('pricing.basicTitle')}</Text>
-                  <Text style={pricingStyles.tierDesc}>{t('pricing.basicDescription')}</Text>
-                  <Text style={pricingStyles.tierPrice}>{prices.basic !== '—' ? prices.basic : t('pricing.seePriceAtCheckout')}</Text>
-                </View>
-                <TouchableOpacity
-                  style={[pricingStyles.buyButton, purchasing === 'basic' && pricingStyles.buyButtonDisabled]}
-                  onPress={() => handleBuy('basic')}
-                  disabled={purchasing !== null}
-                >
-                  {purchasing === 'basic'
-                    ? <ActivityIndicator color="white" size="small" />
-                    : <Text style={pricingStyles.buyText}>{t('pricing.buy')}</Text>
-                  }
-                </TouchableOpacity>
-              </View>
-
-              <View style={pricingStyles.divider} />
-
-              <View style={pricingStyles.tier}>
-                <View style={pricingStyles.tierInfo}>
                   <Text style={pricingStyles.tierName}>{t('pricing.premiumTitle')}</Text>
                   <Text style={pricingStyles.tierDesc}>{t('pricing.premiumDescription')}</Text>
-                  <Text style={pricingStyles.tierPrice}>{prices.premium !== '—' ? prices.premium : t('pricing.seePriceAtCheckout')}</Text>
+                  <Text style={pricingStyles.tierPrice}>
+                    {!priceUnavailable ? premiumPrice : t('pricing.seePriceAtCheckout')}
+                  </Text>
                 </View>
                 <TouchableOpacity
-                  style={[pricingStyles.buyButton, pricingStyles.buyButtonPremium, purchasing === 'premium' && pricingStyles.buyButtonDisabled]}
-                  onPress={() => handleBuy('premium')}
-                  disabled={purchasing !== null}
+                  style={[pricingStyles.buyButton, pricingStyles.buyButtonPremium, purchasing && pricingStyles.buyButtonDisabled]}
+                  onPress={handleBuy}
+                  disabled={purchasing}
                 >
-                  {purchasing === 'premium'
+                  {purchasing
                     ? <ActivityIndicator color="white" size="small" />
                     : <Text style={pricingStyles.buyText}>{t('pricing.buy')}</Text>
                   }
