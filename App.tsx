@@ -1,3 +1,4 @@
+import './src/i18n';
 import React from 'react';
 import { useState, useCallback, useEffect } from 'react';
 import { Platform, StatusBar } from 'react-native';
