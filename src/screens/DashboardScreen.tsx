@@ -47,6 +47,7 @@ interface PricingModalProps {
 }
 
 const PricingModal: React.FC<PricingModalProps> = ({ visible, onClose }) => {
+  const { t } = useTranslation();
   const [prices, setPrices] = useState<{ basic: string; premium: string } | null>(null);
   const [pricesLoading, setPricesLoading] = useState(false);
   const [purchasing, setPurchasing] = useState<'basic' | 'premium' | null>(null);
@@ -59,7 +60,7 @@ const PricingModal: React.FC<PricingModalProps> = ({ visible, onClose }) => {
       const p = await getProductPrices();
       setPrices(p);
     } catch (e) {
-      setError('Could not load prices. Check your connection and try again.');
+      setError(t('pricing.loadError'));
     } finally {
       setPricesLoading(false);
     }
@@ -78,7 +79,7 @@ const PricingModal: React.FC<PricingModalProps> = ({ visible, onClose }) => {
     } catch (e: any) {
       // User cancelled or sandbox error — silently ignore cancellations
       if (!e?.message?.includes('cancelled') && !e?.message?.includes('cancel')) {
-        setError(e?.message || 'Purchase failed. Please try again.');
+        setError(e?.message || t('pricing.purchaseFailed'));
       }
     } finally {
       setPurchasing(null);
@@ -92,20 +93,20 @@ const PricingModal: React.FC<PricingModalProps> = ({ visible, onClose }) => {
       <View style={pricingStyles.overlay}>
         <View style={pricingStyles.sheet}>
           <View style={pricingStyles.header}>
-            <Text style={pricingStyles.title}>Pricing</Text>
+            <Text style={pricingStyles.title}>{t('pricing.title')}</Text>
             <TouchableOpacity onPress={onClose} style={pricingStyles.closeButton}>
               <MaterialCommunityIcons name="close" size={22} color="#555" />
             </TouchableOpacity>
           </View>
 
           <Text style={pricingStyles.subtitle}>
-            Purchase a game package to create and share a Mr &amp; Mrs game.
+            {t('pricing.subtitle')}
           </Text>
 
           {pricesLoading && (
             <View style={pricingStyles.center}>
               <ActivityIndicator color={Purple} size="large" />
-              <Text style={pricingStyles.loadingText}>Loading prices…</Text>
+              <Text style={pricingStyles.loadingText}>{t('pricing.loadingPrices')}</Text>
             </View>
           )}
 
@@ -113,7 +114,7 @@ const PricingModal: React.FC<PricingModalProps> = ({ visible, onClose }) => {
             <View style={pricingStyles.center}>
               <Text style={pricingStyles.errorText}>{error}</Text>
               <TouchableOpacity style={pricingStyles.retryButton} onPress={fetchPrices}>
-                <Text style={pricingStyles.retryText}>Retry</Text>
+                <Text style={pricingStyles.retryText}>{t('pricing.retry')}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -124,16 +125,16 @@ const PricingModal: React.FC<PricingModalProps> = ({ visible, onClose }) => {
                 <View style={pricingStyles.sandboxNote}>
                   <MaterialCommunityIcons name="information-outline" size={16} color="#8A4FFF" />
                   <Text style={pricingStyles.sandboxText}>
-                    Prices unavailable in sandbox — tap Buy to trigger the StoreKit sheet.
+                    {t('pricing.sandboxNote')}
                   </Text>
                 </View>
               )}
 
               <View style={pricingStyles.tier}>
                 <View style={pricingStyles.tierInfo}>
-                  <Text style={pricingStyles.tierName}>Basic Game</Text>
-                  <Text style={pricingStyles.tierDesc}>Text-based answers for your partner</Text>
-                  <Text style={pricingStyles.tierPrice}>{prices.basic !== '—' ? prices.basic : 'See price at checkout'}</Text>
+                  <Text style={pricingStyles.tierName}>{t('pricing.basicTitle')}</Text>
+                  <Text style={pricingStyles.tierDesc}>{t('pricing.basicDescription')}</Text>
+                  <Text style={pricingStyles.tierPrice}>{prices.basic !== '—' ? prices.basic : t('pricing.seePriceAtCheckout')}</Text>
                 </View>
                 <TouchableOpacity
                   style={[pricingStyles.buyButton, purchasing === 'basic' && pricingStyles.buyButtonDisabled]}
@@ -142,7 +143,7 @@ const PricingModal: React.FC<PricingModalProps> = ({ visible, onClose }) => {
                 >
                   {purchasing === 'basic'
                     ? <ActivityIndicator color="white" size="small" />
-                    : <Text style={pricingStyles.buyText}>Buy</Text>
+                    : <Text style={pricingStyles.buyText}>{t('pricing.buy')}</Text>
                   }
                 </TouchableOpacity>
               </View>
@@ -151,9 +152,9 @@ const PricingModal: React.FC<PricingModalProps> = ({ visible, onClose }) => {
 
               <View style={pricingStyles.tier}>
                 <View style={pricingStyles.tierInfo}>
-                  <Text style={pricingStyles.tierName}>Premium Game</Text>
-                  <Text style={pricingStyles.tierDesc}>Answers with photos &amp; videos</Text>
-                  <Text style={pricingStyles.tierPrice}>{prices.premium !== '—' ? prices.premium : 'See price at checkout'}</Text>
+                  <Text style={pricingStyles.tierName}>{t('pricing.premiumTitle')}</Text>
+                  <Text style={pricingStyles.tierDesc}>{t('pricing.premiumDescription')}</Text>
+                  <Text style={pricingStyles.tierPrice}>{prices.premium !== '—' ? prices.premium : t('pricing.seePriceAtCheckout')}</Text>
                 </View>
                 <TouchableOpacity
                   style={[pricingStyles.buyButton, pricingStyles.buyButtonPremium, purchasing === 'premium' && pricingStyles.buyButtonDisabled]}
@@ -162,7 +163,7 @@ const PricingModal: React.FC<PricingModalProps> = ({ visible, onClose }) => {
                 >
                   {purchasing === 'premium'
                     ? <ActivityIndicator color="white" size="small" />
-                    : <Text style={pricingStyles.buyText}>Buy</Text>
+                    : <Text style={pricingStyles.buyText}>{t('pricing.buy')}</Text>
                   }
                 </TouchableOpacity>
               </View>
@@ -170,7 +171,7 @@ const PricingModal: React.FC<PricingModalProps> = ({ visible, onClose }) => {
           )}
 
           <Text style={pricingStyles.legalNote}>
-            Payment will be charged to your Apple ID account at confirmation.
+            {t('pricing.legalNote')}
           </Text>
         </View>
       </View>
