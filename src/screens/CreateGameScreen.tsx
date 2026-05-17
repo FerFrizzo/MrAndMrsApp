@@ -267,18 +267,18 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
     try {
       prices = await getProductPrices();
     } catch (e) {
-      showToast('Could not load prices. Please try again.', 'error');
+      showToast(t('createGame.priceLoadError'), 'error');
       return;
     }
     const price = isPremium ? prices.premium : prices.basic;
 
     showDialog(
-      'Create Game',
-      `Creating a ${isPremium ? 'premium' : 'basic'} game costs ${price}. Do you want to proceed to payment?`,
+      t('createGame.paymentDialogTitle'),
+      t('createGame.paymentDialogBody', { tier: isPremium ? t('createGame.premium') : t('createGame.standard'), price }),
       [
-        { text: 'Cancel', style: 'cancel', onPress: () => { } },
+        { text: t('createGame.paymentDialogCancel'), style: 'cancel', onPress: () => { } },
         {
-          text: `Pay ${price} & Create`,
+          text: t('createGame.paymentDialogPay', { price }),
           style: 'default',
           onPress: async () => {
             try {
@@ -307,8 +307,8 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
                 } else if (inviteSuccess) {
                   try {
                     await Share.share({
-                      message: `Join me for a game of "Mr & Mrs"! I've sent an invite to your email. Download the app and find out how well you know your partner!`,
-                      title: `${gameName} Invitation`,
+                      message: t('createGame.shareMessage'),
+                      title: t('createGame.shareTitle', { name: gameName }),
                     });
                     navigation.navigate('Dashboard');
                   } catch (shareError) {
@@ -321,7 +321,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
               navigation.navigate('Dashboard');
             } catch (error: any) {
               console.error('Error:', error);
-              showToast(error.message || 'Payment failed or game creation failed', 'error');
+              showToast(error.message || t('createGame.paymentFailed'), 'error');
             } finally {
               setLoading(false);
             }
@@ -519,7 +519,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
               <Text style={styles.summaryItem}>{`${t('createGame.partnerInterviewed')}: ${partnerInterviewedEmail}`}</Text>
               <Text style={styles.summaryItem}>{`${t('createGame.partnerPlaying')}: ${partnerPlayingEmail}`}</Text>
               <Text style={styles.summaryItem}>{`${t('createGame.questionsCount')}: ${questions.length}`}</Text>
-              <Text style={styles.summaryItem}>Type: {isPremium ? t('createGame.premium') : t('createGame.standard')}</Text>
+              <Text style={styles.summaryItem}>{`${t('createGame.type')}: ${isPremium ? t('createGame.premium') : t('createGame.standard')}`}</Text>
               <Text style={styles.summaryItem}>
                 {`${t('createGame.price')}: ${isPremium ? prices.premium : prices.basic}`}
               </Text>
