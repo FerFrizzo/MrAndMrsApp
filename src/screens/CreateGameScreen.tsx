@@ -927,4 +927,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CreateGameScreen; 
+export default CreateGameScreen;
