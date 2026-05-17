@@ -45,7 +45,7 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
     }
 
     if (!email.trim() || !password.trim() || !confirmPassword.trim()) {
-      showToast('Please fill in all fields', 'error');
+      showToast(t('auth.fillAllFields'), 'error');
       return;
     }
 
@@ -76,18 +76,18 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
             } catch (error: any) {
               console.error("Sign up error:", error);
 
-              let errorMessage = 'Error signing up';
+              let errorMessage = t('auth.signUpFailed');
 
               // Handle Supabase error messages
               if (error.message) {
                 if (error.message.includes('already registered')) {
-                  errorMessage = 'This email is already in use. Please try another email or sign in.';
+                  errorMessage = t('auth.emailInUse');
                 } else if (error.message.includes('invalid email')) {
-                  errorMessage = 'The email address is invalid. Please enter a valid email.';
+                  errorMessage = t('auth.emailInvalid');
                 } else if (error.message.includes('password')) {
-                  errorMessage = 'The password is too weak. Please use a stronger password.';
+                  errorMessage = t('auth.passwordWeak');
                 } else if (error.message.includes('network')) {
-                  errorMessage = 'Network error. Please check your internet connection and try again.';
+                  errorMessage = t('auth.networkError');
                 } else {
                   errorMessage = error.message;
                 }

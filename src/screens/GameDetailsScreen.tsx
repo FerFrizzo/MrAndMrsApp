@@ -108,7 +108,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
     const questionToDelete = questions[index];
 
     if (!questionToDelete || !questionToDelete.id) {
-      showToast('Cannot delete question - missing ID', 'error');
+      showToast(t('gameDetails.missingQuestionId'), 'error');
       return;
     }
 
@@ -163,12 +163,12 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
 
   const handleSaveQuestion = async () => {
     if (!questionText.trim()) {
-      showToast('Please enter a question', 'error');
+      showToast(t('gameDetails.enterQuestion'), 'error');
       return;
     }
 
     if (questionType === 'multiple_choice' && (!multipleChoiceOptions || multipleChoiceOptions.length < 2)) {
-      showToast('Multiple choice questions must have at least 2 options', 'error');
+      showToast(t('gameDetails.minTwoOptions'), 'error');
       return;
     }
 
@@ -244,7 +244,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
             showToast(t('gameDetails.questionUpdated'), 'success');
           }
         } else {
-          showToast('Cannot update question - missing ID', 'error');
+          showToast(t('gameDetails.missingUpdateId'), 'error');
         }
       }
     } catch (error: any) {
@@ -257,7 +257,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
 
   const handleSendInvite = async () => {
     if (!game) {
-      showToast('Game not found', 'error');
+      showToast(t('gameDetails.gameNotFound'), 'error');
       return;
     }
 
@@ -266,7 +266,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
       try {
         prices = await getProductPrices();
       } catch (e) {
-        showToast('Could not load prices. Please try again.', 'error');
+        showToast(t('gameDetails.priceLoadError'), 'error');
         return;
       }
 
@@ -276,7 +276,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
         [
           { text: t('gameDetails.cancel'), style: 'cancel', onPress: () => { } },
           {
-            text: `Basic (${prices.basic})`,
+            text: t('gameDetails.basicTier', { price: prices.basic }),
             style: 'default',
             onPress: async () => {
               try {
@@ -298,7 +298,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
             }
           },
           {
-            text: `Premium (${prices.premium})`,
+            text: t('gameDetails.premiumTier', { price: prices.premium }),
             style: 'default',
             onPress: async () => {
               try {
@@ -346,8 +346,8 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
               if (success) {
                 try {
                   await Share.share({
-                    message: `Join me for a game of "Mr & Mrs"! I've sent an invite to your email. Download the app and find out how well you know your partner!`,
-                    title: `${game.game_name} Invitation`,
+                    message: t('gameDetails.shareMessage'),
+                    title: t('gameDetails.shareTitle', { name: game.game_name }),
                   });
                 } catch (shareError) {
                   console.error('Share error:', shareError);
