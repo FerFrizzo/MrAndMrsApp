@@ -24,7 +24,7 @@ export const QuestionPackagePicker: React.FC<Props> = ({ visible, onClose, onSel
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>Question Packages</Text>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton} accessibilityRole="button" accessibilityLabel="Close">
             <MaterialCommunityIcons name="close" size={24} color={Purple} />
           </TouchableOpacity>
         </View>
@@ -38,6 +38,8 @@ export const QuestionPackagePicker: React.FC<Props> = ({ visible, onClose, onSel
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.card}
+              accessibilityRole="button"
+              accessibilityLabel={`Select ${item.name} package, ${item.questions.length} questions`}
               onPress={() => {
                 onSelectPackage(item);
                 onClose();
