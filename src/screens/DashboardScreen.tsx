@@ -23,31 +23,19 @@ import { GamesSection } from '../components/GamesSection';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Menu, Provider, Button } from 'react-native-paper';
 import { getProductPrices, purchaseGame } from '../services/paymentService';
+import { useTranslation } from 'react-i18next';
 
 type DashboardScreenProps = NativeStackScreenProps<RootStackParamList, 'Dashboard'>;
 
-const HOW_TO_PLAY_STEPS = [
-  {
-    title: "Bridesmaid/Groomsman",
-    description: "1. Create a new game in the app\n2. Send the link to the partner who won't be at the party\n3. Wait for them to answer all questions\n4. Host the reveal party with the other partner!"
-  },
-  {
-    title: "Partner Answering",
-    description: "1. Get the link from your partner's friend\n2. Answer all questions honestly\n3. Submit your answers before the party\n4. Keep your answers secret!"
-  },
-  {
-    title: "Partner Playing",
-    description: "1. Come to the party\n2. Answer the same questions in front of everyone\n3. Watch as your answers are compared with your partner's\n4. Enjoy the fun and laughter!"
-  },
-  {
-    title: "Pro Tips!",
-    description: "• Mix fun and serious questions\n• Take videos of the reactions\n• Add a dare or challenge for each question answered incorrectly"
-  }
-];
+interface HowToPlayStep {
+  title: string;
+  description: string;
+}
 
 interface HowToPlayModalProps {
   visible: boolean;
   currentStep: number;
+  steps: HowToPlayStep[];
   onNext: () => void;
   onBack: () => void;
   onClose: () => void;
@@ -190,45 +178,49 @@ const PricingModal: React.FC<PricingModalProps> = ({ visible, onClose }) => {
   );
 };
 
-const HowToPlayModal: React.FC<HowToPlayModalProps> = ({ visible, currentStep, onNext, onBack, onClose }) => (
-  <Modal
-    visible={visible}
-    animationType="slide"
-    transparent={true}
-    onRequestClose={onClose}
-  >
-    <View style={styles.modalOverlay}>
-      <View style={styles.modalContent}>
-        <Text style={styles.modalTitle}>
-          {HOW_TO_PLAY_STEPS[currentStep - 1].title}
-        </Text>
-        <Text style={styles.modalDescription}>
-          {HOW_TO_PLAY_STEPS[currentStep - 1].description}
-        </Text>
-        <View style={styles.modalButtons}>
-          {currentStep > 1 && (
+const HowToPlayModal: React.FC<HowToPlayModalProps> = ({ visible, currentStep, steps, onNext, onBack, onClose }) => {
+  const { t } = useTranslation();
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <Text style={styles.modalTitle}>
+            {steps[currentStep - 1].title}
+          </Text>
+          <Text style={styles.modalDescription}>
+            {steps[currentStep - 1].description}
+          </Text>
+          <View style={styles.modalButtons}>
+            {currentStep > 1 && (
+              <Button
+                mode="contained"
+                onPress={onBack}
+                style={styles.modalButton}
+              >
+                {t('common.back')}
+              </Button>
+            )}
             <Button
               mode="contained"
-              onPress={onBack}
+              onPress={onNext}
               style={styles.modalButton}
             >
-              Back
+              {currentStep === steps.length ? t('common.close') : 'Next'}
             </Button>
-          )}
-          <Button
-            mode="contained"
-            onPress={onNext}
-            style={styles.modalButton}
-          >
-            {currentStep === HOW_TO_PLAY_STEPS.length ? "Close" : "Next"}
-          </Button>
+          </View>
         </View>
       </View>
-    </View>
-  </Modal>
-);
+    </Modal>
+  );
+};
 
 const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [createdGames, setCreatedGames] = useState<GameItem[]>([]);
   const [partnerInterviewedGames, setPartnerInterviewedGames] = useState<GameItem[]>([]);
@@ -238,6 +230,13 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
   const [howToPlayVisible, setHowToPlayVisible] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [pricingVisible, setPricingVisible] = useState(false);
+
+  const HOW_TO_PLAY_STEPS = [
+    { title: t('howToPlay.bridesmaidsGroomsmen'), description: t('howToPlay.bridesmaidsGroomsmenSteps') },
+    { title: t('howToPlay.partnerAnswering'), description: t('howToPlay.partnerAnsweringSteps') },
+    { title: t('howToPlay.partnerPlaying'), description: t('howToPlay.partnerPlayingSteps') },
+    { title: t('howToPlay.proTips'), description: t('howToPlay.proTipsContent') },
+  ];
 
   const openMenu = () => setMenuVisible(true);
   const closeMenu = () => setMenuVisible(false);
@@ -319,12 +318,12 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
       >
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.header}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.howToPlayButton}
               onPress={() => setHowToPlayVisible(true)}
             >
               <MaterialCommunityIcons name="help-circle-outline" size={24} color="white" />
-              <Text style={styles.howToPlayText}>How to Play</Text>
+              <Text style={styles.howToPlayText}>{t('dashboard.howToPlay')}</Text>
             </TouchableOpacity>
             <Menu
               visible={menuVisible}
@@ -337,7 +336,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
             >
               <Menu.Item
                 onPress={handleAccountPress}
-                title="Account"
+                title={t('account.title')}
                 leadingIcon="account"
               />
               <Menu.Item
@@ -347,7 +346,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
               />
               <Menu.Item
                 onPress={handleSignOut}
-                title="Sign Out"
+                title={t('auth.signOut')}
                 leadingIcon="logout"
               />
             </Menu>
@@ -356,6 +355,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
           <HowToPlayModal
             visible={howToPlayVisible}
             currentStep={currentStep}
+            steps={HOW_TO_PLAY_STEPS}
             onNext={handleHowToPlayNext}
             onBack={handleHowToPlayBack}
             onClose={handleHowToPlayClose}
@@ -381,23 +381,23 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
               style={styles.createGameButton}
               onPress={handleCreateGame}
             >
-              <Text style={styles.createGameText}>Create New Game</Text>
+              <Text style={styles.createGameText}>{t('dashboard.newGame')}</Text>
             </TouchableOpacity>
 
             {/* My Games Section */}
             <GamesSection
-              title="My Games"
+              title={t('dashboard.myGames')}
               games={createdGames}
-              emptyMessage="Hit that create game button!"
+              emptyMessage={t('dashboard.noGames')}
               loading={loading}
               refreshing={refreshing}
             />
 
             {/* Games I'm Interviewed In Section */}
             <GamesSection
-              title="What I Need to Respond To"
+              title={t('dashboard.gamesWherePartner')}
               games={partnerInterviewedGames}
-              emptyMessage="Hold on, you haven't been interviewed in any games yet."
+              emptyMessage={t('dashboard.noGames')}
               loading={loading}
               refreshing={refreshing}
             />
