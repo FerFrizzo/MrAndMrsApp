@@ -1,4 +1,3 @@
-// src/data/questionPackages.ts
 import { GameQuestion } from '../types/GameData';
 
 export interface QuestionPackage {
