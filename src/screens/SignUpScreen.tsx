@@ -19,6 +19,7 @@ import { useAuth } from '../context/AuthContext';
 import { Purple, PurpleLight } from '../utils/Colors';
 import { signUpWithEmail } from '../services/authService';
 import { useToast } from '../contexts/ToastContext';
+import { useTranslation } from 'react-i18next';
 
 type SignUpScreenProps = NativeStackScreenProps<RootStackParamList, 'SignUp'>;
 
@@ -30,6 +31,7 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const { setUser } = useAuth();
   const { showToast, showDialog } = useToast();
+  const { t } = useTranslation();
 
   const handleSignUp = async () => {
     if (password !== confirmPassword) {
@@ -48,16 +50,16 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
     }
 
     showDialog(
-      'Create Account',
-      'Would you like to create your account?',
+      t('auth.createAccountTitle'),
+      t('auth.createAccountConfirm'),
       [
         {
-          text: 'Cancel',
+          text: t('account.cancel'),
           style: 'cancel',
           onPress: () => { }
         },
         {
-          text: 'Create',
+          text: t('auth.create'),
           style: 'default',
           onPress: async () => {
             try {
@@ -69,7 +71,7 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
                 throw error;
               }
 
-              showToast('Account created successfully!', 'success');
+              showToast(t('auth.accountCreated'), 'success');
               navigation.navigate('SignIn');
             } catch (error: any) {
               console.error("Sign up error:", error);
@@ -124,7 +126,7 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
             </View>
 
             <View style={styles.formContainer}>
-              <Text style={styles.label}>Full Name</Text>
+              <Text style={styles.label}>{t('auth.fullName')}</Text>
               <TextInput
                 style={styles.input}
                 placeholder=""
@@ -134,7 +136,7 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
                 autoCapitalize="words"
               />
 
-              <Text style={styles.label}>Email</Text>
+              <Text style={styles.label}>{t('auth.email')}</Text>
               <TextInput
                 style={styles.input}
                 placeholder=""
@@ -145,7 +147,7 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
                 keyboardType="email-address"
               />
 
-              <Text style={styles.label}>Password</Text>
+              <Text style={styles.label}>{t('auth.password')}</Text>
               <TextInput
                 style={styles.input}
                 placeholder=""
@@ -155,7 +157,7 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
                 secureTextEntry
               />
 
-              <Text style={styles.label}>Confirm Password</Text>
+              <Text style={styles.label}>{t('auth.confirmPassword')}</Text>
               <TextInput
                 style={styles.input}
                 placeholder=""
@@ -173,7 +175,7 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
                 {loading ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.signUpButtonText}>Create Account</Text>
+                  <Text style={styles.signUpButtonText}>{t('auth.createAccount')}</Text>
                 )}
               </TouchableOpacity>
 
@@ -182,7 +184,7 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
                 onPress={() => navigation.navigate('SignIn')}
               >
                 <Text style={styles.backToLoginText}>
-                  Already have an account? <Text style={styles.backToLoginLink}>Sign In</Text>
+                  {t('auth.alreadyHaveAccount')} <Text style={styles.backToLoginLink}>{t('auth.signIn')}</Text>
                 </Text>
               </TouchableOpacity>
             </View>

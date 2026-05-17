@@ -21,6 +21,7 @@ import { signInWithEmail } from '../services/authService';
 import SignInWithGoogle from '../components/SignInWithGoogle';
 import SignInWithApple from '../components/SignInWithApple';
 import { useToast } from '../contexts/ToastContext';
+import { useTranslation } from 'react-i18next';
 
 type SignInScreenProps = NativeStackScreenProps<RootStackParamList, 'SignIn'>;
 
@@ -30,6 +31,7 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const { setUser } = useAuth();
   const { showToast } = useToast();
+  const { t } = useTranslation();
 
   const handleSignIn = async () => {
     if (!email || !password) {
@@ -76,7 +78,7 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
             </View>
 
             <View style={styles.form}>
-              <Text style={styles.label}>Email</Text>
+              <Text style={styles.label}>{t('auth.email')}</Text>
               <TextInput
                 style={styles.input}
                 placeholderTextColor="#A0A0A0"
@@ -86,7 +88,7 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
                 keyboardType="email-address"
               />
 
-              <Text style={styles.label}>Password</Text>
+              <Text style={styles.label}>{t('auth.password')}</Text>
               <TextInput
                 style={styles.input}
                 placeholderTextColor="#A0A0A0"
@@ -99,7 +101,7 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
                 style={styles.forgotPassword}
                 onPress={() => navigation.navigate('PasswordRecovery')}
               >
-                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+                <Text style={styles.forgotPasswordText}>{t('auth.forgotPassword')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -110,7 +112,7 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
               >
                 {loading
                   ? <ActivityIndicator size="small" color="#FFFFFF" />
-                  : <Text style={styles.loginButtonText}>Log In</Text>
+                  : <Text style={styles.loginButtonText}>{t('auth.logIn')}</Text>
                 }
               </TouchableOpacity>
 
@@ -119,14 +121,14 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
                 onPress={() => navigation.navigate('SignUp')}
               >
                 <Text style={styles.createAccountText}>
-                  Don't have an account?{' '}
-                  <Text style={styles.createAccountLink}>Create one</Text>
+                  {t('auth.noAccount')}{' '}
+                  <Text style={styles.createAccountLink}>{t('auth.createOne')}</Text>
                 </Text>
               </TouchableOpacity>
 
               <View style={styles.separator}>
                 <View style={styles.separatorLine} />
-                <Text style={styles.separatorText}>or sign in with</Text>
+                <Text style={styles.separatorText}>{t('auth.orSignInWith')}</Text>
                 <View style={styles.separatorLine} />
               </View>
 

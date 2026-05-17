@@ -19,6 +19,7 @@ import { RootStackParamList } from '../types/RootStackParamList';
 import { Purple, PurpleLight } from '../utils/Colors';
 import { AntDesign } from '@expo/vector-icons';
 import { resetPassword } from '../services/authService';
+import { useTranslation } from 'react-i18next';
 
 type PasswordRecoveryScreenProps = NativeStackScreenProps<RootStackParamList, 'PasswordRecovery'>;
 
@@ -26,10 +27,11 @@ const PasswordRecoveryScreen: React.FC<PasswordRecoveryScreenProps> = ({ navigat
   const [email, setEmail] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [emailSent, setEmailSent] = useState<boolean>(false);
+  const { t } = useTranslation();
 
   const handlePasswordReset = async () => {
     if (!email.trim()) {
-      Alert.alert('Error', 'Please enter your email address');
+      Alert.alert(t('common.error'), t('auth.enterYourEmail'));
       return;
     }
 
@@ -57,7 +59,7 @@ const PasswordRecoveryScreen: React.FC<PasswordRecoveryScreenProps> = ({ navigat
         errorMessage = error.message;
       }
 
-      Alert.alert('Error', errorMessage);
+      Alert.alert(t('common.error'), errorMessage);
     } finally {
       setLoading(false);
     }
@@ -93,16 +95,16 @@ const PasswordRecoveryScreen: React.FC<PasswordRecoveryScreenProps> = ({ navigat
 
             {!emailSent ? (
               <>
-                <Text style={styles.title}>Reset Password</Text>
+                <Text style={styles.title}>{t('auth.resetPasswordTitle')}</Text>
                 <Text style={styles.subtitle}>
-                  Enter your email address and we'll send you instructions to reset your password.
+                  {t('auth.resetPasswordSubtitle')}
                 </Text>
 
                 <View style={styles.formContainer}>
-                  <Text style={styles.label}>Email</Text>
+                  <Text style={styles.label}>{t('auth.email')}</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="Enter your email"
+                    placeholder={t('auth.enterYourEmail')}
                     placeholderTextColor="#A0A0A0"
                     value={email}
                     onChangeText={setEmail}
@@ -119,22 +121,22 @@ const PasswordRecoveryScreen: React.FC<PasswordRecoveryScreenProps> = ({ navigat
                     {loading ? (
                       <ActivityIndicator size="small" color="#FFFFFF" />
                     ) : (
-                      <Text style={styles.resetButtonText}>Send Reset Link</Text>
+                      <Text style={styles.resetButtonText}>{t('auth.sendResetLink')}</Text>
                     )}
                   </TouchableOpacity>
                 </View>
               </>
             ) : (
               <View style={styles.successContainer}>
-                <Text style={styles.title}>Check Your Email</Text>
+                <Text style={styles.title}>{t('auth.checkYourEmail')}</Text>
                 <Text style={styles.subtitle}>
-                  We've sent password reset instructions to {email}
+                  {t('auth.resetEmailSentTo', { email })}
                 </Text>
                 <TouchableOpacity
                   style={styles.backToLoginButton}
                   onPress={handleBackToLogin}
                 >
-                  <Text style={styles.backToLoginText}>Back to Login</Text>
+                  <Text style={styles.backToLoginText}>{t('auth.backToLogin')}</Text>
                 </TouchableOpacity>
               </View>
             )}

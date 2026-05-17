@@ -20,12 +20,14 @@ import { getUserProfile, UserProfile } from '../services/userService';
 import { useToast } from '../contexts/ToastContext';
 import { Dialog } from '../components/Dialog';
 import { deleteAccount, signOut } from '../services/authService';
+import { useTranslation } from 'react-i18next';
 
 type AccountScreenProps = NativeStackScreenProps<RootStackParamList, 'Account'>;
 
 const AccountScreen: React.FC<AccountScreenProps> = ({ navigation }) => {
   const { user, setUser } = useAuth();
   const { showToast } = useToast();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -43,13 +45,13 @@ const AccountScreen: React.FC<AccountScreenProps> = ({ navigation }) => {
       const { profile, error } = await getUserProfile(user.id);
 
       if (error) {
-        showToast('Failed to load profile information', 'error');
+        showToast(t('account.failedLoadProfile'), 'error');
       } else if (profile) {
         setUserProfile(profile);
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
-      showToast('An error occurred while loading profile', 'error');
+      showToast(t('account.errorLoadingProfile'), 'error');
     } finally {
       setLoading(false);
     }
@@ -65,14 +67,14 @@ const AccountScreen: React.FC<AccountScreenProps> = ({ navigation }) => {
       const { error } = await deleteAccount();
       if (error) {
         console.error('deleteAccount error:', JSON.stringify(error));
-        showToast('Failed to delete account. Please try again.', 'error');
+        showToast(t('account.failedDeleteAccount'), 'error');
         return;
       }
       await signOut();
       setUser(null);
     } catch (e) {
       console.error('deleteAccount exception:', e);
-      showToast('An unexpected error occurred. Please try again.', 'error');
+      showToast(t('account.unexpectedError'), 'error');
     } finally {
       setDeleting(false);
     }
@@ -119,7 +121,7 @@ const AccountScreen: React.FC<AccountScreenProps> = ({ navigation }) => {
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Account</Text>
+          <Text style={styles.headerTitle}>{t('account.title')}</Text>
           <View style={{ width: 24 }} />
         </View>
 
@@ -137,26 +139,26 @@ const AccountScreen: React.FC<AccountScreenProps> = ({ navigation }) => {
                   <MaterialCommunityIcons name="account-circle" size={80} color="white" />
                 )}
               </View>
-              <Text style={styles.userName}>{userProfile?.display_name || userProfile?.email || 'User'}</Text>
+              <Text style={styles.userName}>{userProfile?.display_name || userProfile?.email || t('common.error')}</Text>
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Account Information</Text>
+              <Text style={styles.sectionTitle}>{t('account.accountInformation')}</Text>
               <View style={styles.infoContainer}>
 
                 {userProfile?.display_name && (
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Full Name</Text>
+                    <Text style={styles.infoLabel}>{t('account.fullName')}</Text>
                     <Text style={styles.infoValue}>{userProfile.display_name}</Text>
                   </View>
                 )}
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Email</Text>
+                  <Text style={styles.infoLabel}>{t('account.email')}</Text>
                   <Text style={styles.infoValue}>{userProfile?.email}</Text>
                 </View>
 
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Member Since</Text>
+                  <Text style={styles.infoLabel}>{t('account.memberSince')}</Text>
                   <Text style={styles.infoValue}>
                     {userProfile?.created_at
                       ? new Date(userProfile.created_at).toLocaleDateString('en-GB', {
@@ -181,7 +183,7 @@ const AccountScreen: React.FC<AccountScreenProps> = ({ navigation }) => {
             ) : (
               <>
                 <MaterialCommunityIcons name="delete-outline" size={24} color="#FF3B30" />
-                <Text style={styles.deleteButtonText}>Delete Account</Text>
+                <Text style={styles.deleteButtonText}>{t('account.deleteAccount')}</Text>
               </>
             )}
           </TouchableOpacity>
@@ -191,25 +193,25 @@ const AccountScreen: React.FC<AccountScreenProps> = ({ navigation }) => {
             onPress={handleContactSupport}
           >
             <MaterialCommunityIcons name="email-outline" size={24} color={Purple} />
-            <Text style={styles.supportButtonText}>Contact Support</Text>
+            <Text style={styles.supportButtonText}>{t('account.contactSupport')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
 
       <Dialog
         visible={showDeleteDialog}
-        title="Delete Account"
-        message="This will permanently delete your account and all your data. This action cannot be undone."
+        title={t('account.deleteAccount')}
+        message={t('account.deleteAccountDialogMessage')}
         type="warning"
         onDismiss={() => setShowDeleteDialog(false)}
         buttons={[
           {
-            text: 'Delete Permanently',
+            text: t('account.deletePermanently'),
             style: 'destructive',
             onPress: handleDeleteAccount,
           },
           {
-            text: 'Cancel',
+            text: t('account.cancel'),
             style: 'cancel',
             onPress: () => setShowDeleteDialog(false),
           },

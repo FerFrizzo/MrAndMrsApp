@@ -22,6 +22,7 @@ import MultipleChoiceEditor from '../components/MultipleChoiceEditor';
 import { useToast } from '../contexts/ToastContext';
 import { supabase } from '../config/supabaseClient';
 import { purchaseGame, getProductPrices } from '../services/paymentService';
+import { useTranslation } from 'react-i18next';
 
 type GameDetailsScreenProps = NativeStackScreenProps<RootStackParamList, 'GameDetails' | 'GameQuestion'>;
 
@@ -41,6 +42,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
   const [multipleChoiceOptions, setMultipleChoiceOptions] = useState<string[]>([]);
   const [allowsMultipleSelection, setAllowsMultipleSelection] = useState(false);
   const { showToast, showDialog } = useToast();
+  const { t } = useTranslation();
   const [status, setStatus] = useState<keyof typeof GAME_STATUS_MAP>('in_creation');
   const [targetStarted, setTargetStarted] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -111,16 +113,16 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
     }
 
     showDialog(
-      'Delete Question',
-      'Are you sure you want to delete this question?',
+      t('gameDetails.deleteQuestion'),
+      t('gameDetails.confirmDeleteQuestion'),
       [
         {
-          text: 'Cancel',
+          text: t('gameDetails.cancel'),
           style: 'cancel',
           onPress: () => { }
         },
         {
-          text: 'Delete',
+          text: t('gameDetails.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -144,7 +146,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
                   });
                 }
 
-                showToast('Question deleted successfully', 'success');
+                showToast(t('gameDetails.questionDeleted'), 'success');
               }
             } catch (error: any) {
               console.error('Error deleting question:', error);
@@ -204,7 +206,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
           }
 
           setModalVisible(false);
-          showToast('Question created successfully', 'success');
+          showToast(t('gameDetails.questionCreated'), 'success');
         }
       } else {
         // Update existing question
@@ -239,7 +241,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
             }
 
             setModalVisible(false);
-            showToast('Question updated successfully', 'success');
+            showToast(t('gameDetails.questionUpdated'), 'success');
           }
         } else {
           showToast('Cannot update question - missing ID', 'error');
@@ -269,10 +271,10 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
       }
 
       showDialog(
-        'Game Payment',
-        'Choose your game plan to proceed:',
+        t('gameDetails.gamePayment'),
+        t('gameDetails.gamePaymentBody'),
         [
-          { text: 'Cancel', style: 'cancel', onPress: () => { } },
+          { text: t('gameDetails.cancel'), style: 'cancel', onPress: () => { } },
           {
             text: `Basic (${prices.basic})`,
             style: 'default',
@@ -285,13 +287,13 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
 
                 if (error) throw error;
 
-                showToast('Payment successful! Basic game is ready to play.', 'success');
+                showToast(t('gameDetails.paymentSuccessBasic'), 'success');
 
                 // Refresh game data
                 await fetchGameDetails();
               } catch (error: any) {
                 console.error('Error:', error);
-                showToast(error.message || 'Payment failed', 'error');
+                showToast(error.message || t('common.error'), 'error');
               }
             }
           },
@@ -306,13 +308,13 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
                 const { error } = await updateGameStatusAndIsPaid("ready_to_play", 'premium', game.id);
                 if (error) throw error;
 
-                showToast('Payment successful! Premium game is ready to play.', 'success');
+                showToast(t('gameDetails.paymentSuccessPremium'), 'success');
 
                 // Refresh game data
                 await fetchGameDetails();
               } catch (error: any) {
                 console.error('Error:', error);
-                showToast(error.message || 'Payment failed', 'error');
+                showToast(error.message || t('common.error'), 'error');
               }
             }
           }
@@ -323,16 +325,16 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
     }
 
     showDialog(
-      'Send Invitation',
-      'Do you want to send an invitation to join this game?',
+      t('gameDetails.sendInvitation'),
+      t('gameDetails.sendInvitationConfirm'),
       [
         {
-          text: 'Cancel',
+          text: t('gameDetails.cancel'),
           style: 'cancel',
           onPress: () => { }
         },
         {
-          text: 'Send',
+          text: t('gameDetails.send'),
           style: 'default',
           onPress: async () => {
             try {
@@ -351,7 +353,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
                   console.error('Share error:', shareError);
                 }
 
-                showToast(`An invitation has been sent to ${game.partner_interviewed_email} with a special link to access this game.`, 'success');
+                showToast(t('gameDetails.invitationSent', { email: game.partner_interviewed_email }), 'success');
               }
             } catch (error: any) {
               showToast(error.message || 'Failed to send invitation', 'error');
@@ -382,7 +384,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
         end={{ x: 1, y: 1 }}
       >
         <ActivityIndicator size="large" color="white" />
-        <Text style={styles.loadingText}>Loading game details...</Text>
+        <Text style={styles.loadingText}>{t('gameDetails.loadingDetails')}</Text>
       </LinearGradient>
     );
   }
@@ -399,7 +401,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
-                {isNewQuestion ? 'Add Question' : 'Edit Question'}
+                {isNewQuestion ? t('gameDetails.addQuestion') : t('gameDetails.editQuestion')}
               </Text>
               <TouchableOpacity
                 style={styles.closeButton}
@@ -410,17 +412,17 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
             </View>
 
             <ScrollView style={styles.modalScrollView}>
-              <Text style={styles.inputLabel}>Question Text</Text>
+              <Text style={styles.inputLabel}>{t('gameDetails.questionText')}</Text>
               <TextInput
                 style={styles.questionInput}
                 value={questionText}
                 onChangeText={setQuestionText}
-                placeholder="Enter your question here"
+                placeholder={t('gameDetails.enterQuestionPlaceholder')}
                 placeholderTextColor="#999"
                 multiline
               />
 
-              <Text style={styles.inputLabel}>Question Type</Text>
+              <Text style={styles.inputLabel}>{t('gameDetails.questionType')}</Text>
               <View style={styles.typeButtonsContainer}>
                 <TouchableOpacity
                   style={[
@@ -433,7 +435,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
                     styles.typeButtonText,
                     questionType === 'text' && styles.typeButtonTextActive
                   ]}>
-                    Text Response
+                    {t('gameDetails.textResponse')}
                   </Text>
                 </TouchableOpacity>
 
@@ -448,7 +450,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
                     styles.typeButtonText,
                     questionType === 'multiple_choice' && styles.typeButtonTextActive
                   ]}>
-                    Multiple Choice
+                    {t('gameDetails.multipleChoice')}
                   </Text>
                 </TouchableOpacity>
 
@@ -463,14 +465,14 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
                     styles.typeButtonText,
                     questionType === 'true_false' && styles.typeButtonTextActive
                   ]}>
-                    True/False
+                    {t('gameDetails.trueFalse')}
                   </Text>
                 </TouchableOpacity>
               </View>
 
               {questionType === 'multiple_choice' && (
                 <View style={styles.multipleChoiceContainer}>
-                  <Text style={styles.inputLabel}>Multiple Choice Options</Text>
+                  <Text style={styles.inputLabel}>{t('gameDetails.multipleChoiceOptions')}</Text>
 
 
                   <View style={styles.editorContainer}>
@@ -506,7 +508,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
                 onPress={() => setModalVisible(false)}
                 disabled={saving}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={styles.cancelButtonText}>{t('gameDetails.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.saveButton}
@@ -516,7 +518,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
                 {saving ? (
                   <ActivityIndicator size="small" color="white" />
                 ) : (
-                  <Text style={styles.saveButtonText}>Save</Text>
+                  <Text style={styles.saveButtonText}>{t('gameDetails.save')}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -541,7 +543,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
           >
             <MaterialCommunityIcons name="arrow-left" size={24} color="white" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Game Details</Text>
+          <Text style={styles.headerTitle}>{t('gameDetails.title')}</Text>
           <TouchableOpacity
             style={styles.shareButton}
             onPress={handleSendInvite}
@@ -568,7 +570,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
               <View style={styles.infoCard}>
                 <View style={styles.infoRow}>
                   <Ionicons name="person-outline" size={20} color={Purple} />
-                  <Text style={styles.infoLabel}>Partner Interviewed:</Text>
+                  <Text style={styles.infoLabel}>{t('gameDetails.partnerInterviewed')}</Text>
                   <View style={styles.targetInfo}>
                     <Text style={styles.infoValue}>{game.partner_interviewed_name}</Text>
                   </View>
@@ -576,7 +578,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
 
                 <View style={styles.infoRow}>
                   <Ionicons name="calendar-outline" size={20} color={Purple} />
-                  <Text style={styles.infoLabel}>Created:</Text>
+                  <Text style={styles.infoLabel}>{t('gameDetails.created')}</Text>
                   <Text style={styles.infoValue}>{formatDate(game.created_at || '')}</Text>
                 </View>
 
@@ -584,14 +586,14 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
                 {game.is_paid && (
                   <View style={styles.infoRow}>
                     <MaterialCommunityIcons name={game.is_paid === 'premium' ? "crown" : "crown-outline"} size={20} color={game.is_paid === 'premium' ? "#FFCC00" : Purple} />
-                    <Text style={styles.infoLabel}>Type:</Text>
+                    <Text style={styles.infoLabel}>{t('gameDetails.type')}</Text>
                     <Text style={styles.infoValue}>{game.is_paid === 'premium' ? 'Premium' : game.is_paid === 'basic' ? 'Basic' : 'Not Paid Yet'}</Text>
                   </View>
                 )}
 
                 <View style={styles.infoRow}>
                   <Ionicons name="person-outline" size={20} color={Purple} />
-                  <Text style={styles.infoLabel}>Partner Playing:</Text>
+                  <Text style={styles.infoLabel}>{t('gameDetails.partnerPlaying')}</Text>
                   <View style={styles.targetInfo}>
                     <Text style={styles.infoValue}>{game.partner_playing_name}</Text>
                   </View>
@@ -601,11 +603,11 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
 
               {game.partner_interviewed_email !== currentUserEmail && (
                 <View style={styles.questionsSection}>
-                  <Text style={styles.sectionTitle}>Questions ({questions.length})</Text>
+                  <Text style={styles.sectionTitle}>{t('gameDetails.questionsCount', { count: questions.length })}</Text>
                   {questions.map((question, index) => (
                     <View key={index} style={styles.questionCard}>
                       <View style={styles.questionActions}>
-                        <Text style={styles.questionNumber}>Question {index + 1}</Text>
+                        <Text style={styles.questionNumber}>{t('gameDetails.questionNumber', { number: index + 1 })}</Text>
                         <View style={styles.actionButtons}>
                           {!["answered", "results_revealed", "completed"].includes((game.status as string)) && (
                             <>
@@ -627,15 +629,15 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
                       </View>
                       <Text style={styles.questionText}>{question.question_text}</Text>
                       <View style={styles.questionFooter}>
-                        <Text style={styles.questionType}>Type: {
-                          question.question_type === 'multiple_choice' ? 'Multiple Choice' :
-                            question.question_type === 'text' ? 'Text Response' :
-                              question.question_type === 'true_false' ? 'True/False' :
+                        <Text style={styles.questionType}>{t('gameDetails.type')} {
+                          question.question_type === 'multiple_choice' ? t('gameDetails.multipleChoice') :
+                            question.question_type === 'text' ? t('gameDetails.textResponse') :
+                              question.question_type === 'true_false' ? t('gameDetails.trueFalse') :
                                 question.question_type
                         }</Text>
                         {question.question_type === 'multiple_choice' &&
                           question.allow_multiple_selection && (
-                            <Text style={styles.multipleAnswersLabel}>Multiple answers allowed</Text>
+                            <Text style={styles.multipleAnswersLabel}>{t('gameDetails.multipleAnswersAllowed')}</Text>
                           )}
                       </View>
 
@@ -657,7 +659,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
                       onPress={handleAddQuestion}
                     >
                       <AntDesign name="plus" size={18} color="white" />
-                      <Text style={styles.addQuestionButtonText}>Add Question</Text>
+                      <Text style={styles.addQuestionButtonText}>{t('gameDetails.addQuestion')}</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -679,7 +681,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
                     accessibilityRole="button"
                     accessibilityLabel="View answers for this game"
                   >
-                    <Text style={styles.playButtonText}>View Answers</Text>
+                    <Text style={styles.playButtonText}>{t('gameDetails.viewAnswers')}</Text>
                   </TouchableOpacity>
                 ) : (
                   <TouchableOpacity
@@ -692,7 +694,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
                     ) : (
                       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
                         <MaterialIcons name="email" size={20} color="white" style={styles.inviteIcon} />
-                        <Text style={styles.playButtonText}>Send Invite to {game.partner_interviewed_name}</Text>
+                        <Text style={styles.playButtonText}>{t('gameDetails.sendInviteTo', { name: game.partner_interviewed_name })}</Text>
                       </View>
                     )}
                   </TouchableOpacity>
@@ -709,7 +711,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
                   accessibilityRole="button"
                   accessibilityLabel="Start answering game questions"
                 >
-                  <Text style={styles.playButtonText}>Play Game</Text>
+                  <Text style={styles.playButtonText}>{t('gameDetails.playGame')}</Text>
                 </TouchableOpacity>
               ) : null
             )}
