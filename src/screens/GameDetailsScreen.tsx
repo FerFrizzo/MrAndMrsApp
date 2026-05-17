@@ -249,7 +249,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
       }
     } catch (error: any) {
       console.error('Error saving question:', error);
-      showToast(error?.message || 'An unexpected error occurred while saving the question', 'error');
+      showToast(error?.message || t('gameDetails.saveQuestionError'), 'error');
     } finally {
       setSaving(false);
     }
@@ -356,7 +356,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
                 showToast(t('gameDetails.invitationSent', { email: game.partner_interviewed_email }), 'success');
               }
             } catch (error: any) {
-              showToast(error.message || 'Failed to send invitation', 'error');
+              showToast(error.message || t('gameDetails.sendInviteError'), 'error');
             } finally {
               setSendingInvite(false);
             }

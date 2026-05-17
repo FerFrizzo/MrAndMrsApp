@@ -36,6 +36,7 @@ export default {
     emailInvalid: 'La dirección de correo es inválida. Verifica e intenta de nuevo.',
     passwordWeak: 'La contraseña es muy débil. Usa al menos 6 caracteres.',
     networkError: 'Error de red. Verifica tu conexión.',
+    signInFailed: 'Error al iniciar sesión',
   },
   dashboard: {
     title: 'Él & Ella',
@@ -152,6 +153,8 @@ export default {
     shareTitle: 'Invitación {{name}}',
     basicTier: 'Básico ({{price}})',
     premiumTier: 'Premium ({{price}})',
+    saveQuestionError: 'Ocurrió un error inesperado al guardar la pregunta',
+    sendInviteError: 'Error al enviar la invitación',
   },
   account: {
     title: 'Cuenta',

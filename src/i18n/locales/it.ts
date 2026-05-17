@@ -36,6 +36,7 @@ export default {
     emailInvalid: "L'indirizzo email non è valido. Controlla e riprova.",
     passwordWeak: 'La password è troppo debole. Usa almeno 6 caratteri.',
     networkError: 'Errore di rete. Controlla la connessione.',
+    signInFailed: 'Accesso non riuscito',
   },
   dashboard: {
     title: 'Lui & Lei',
@@ -152,6 +153,8 @@ export default {
     shareTitle: 'Invito {{name}}',
     basicTier: 'Base ({{price}})',
     premiumTier: 'Premium ({{price}})',
+    saveQuestionError: 'Si è verificato un errore imprevisto durante il salvataggio della domanda',
+    sendInviteError: 'Impossibile inviare l\'invito',
   },
   account: {
     title: 'Account',

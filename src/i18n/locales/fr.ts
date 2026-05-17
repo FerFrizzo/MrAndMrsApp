@@ -36,6 +36,7 @@ export default {
     emailInvalid: "L'adresse e-mail est invalide. Vérifiez et réessayez.",
     passwordWeak: 'Le mot de passe est trop faible. Utilisez au moins 6 caractères.',
     networkError: 'Erreur réseau. Vérifiez votre connexion.',
+    signInFailed: 'Échec de la connexion',
   },
   dashboard: {
     title: 'Lui & Elle',
@@ -152,6 +153,8 @@ export default {
     shareTitle: 'Invitation {{name}}',
     basicTier: 'Basique ({{price}})',
     premiumTier: 'Premium ({{price}})',
+    saveQuestionError: 'Une erreur inattendue s\'est produite lors de l\'enregistrement de la question',
+    sendInviteError: 'Échec de l\'envoi de l\'invitation',
   },
   account: {
     title: 'Compte',

@@ -36,6 +36,7 @@ export default {
     emailInvalid: 'Die E-Mail-Adresse ist ungültig. Bitte überprüfen und erneut versuchen.',
     passwordWeak: 'Das Passwort ist zu schwach. Verwende mindestens 6 Zeichen.',
     networkError: 'Netzwerkfehler. Bitte Verbindung überprüfen.',
+    signInFailed: 'Anmeldung fehlgeschlagen',
   },
   dashboard: {
     title: 'Er & Sie',
@@ -152,6 +153,8 @@ export default {
     shareTitle: '{{name}} Einladung',
     basicTier: 'Basic ({{price}})',
     premiumTier: 'Premium ({{price}})',
+    saveQuestionError: 'Ein unerwarteter Fehler ist beim Speichern der Frage aufgetreten',
+    sendInviteError: 'Einladung konnte nicht gesendet werden',
   },
   account: {
     title: 'Konto',

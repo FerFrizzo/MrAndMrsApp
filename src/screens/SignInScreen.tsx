@@ -49,7 +49,7 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
         throw new Error('No user data returned');
       }
     } catch (error: any) {
-      showToast(error.message || 'Failed to sign in', 'error');
+      showToast(error.message || t('auth.signInFailed'), 'error');
     } finally {
       setLoading(false);
     }

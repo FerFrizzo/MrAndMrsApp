@@ -36,6 +36,7 @@ export default {
     emailInvalid: 'The email address is invalid. Please check and try again.',
     passwordWeak: 'The password is too weak. Please use at least 6 characters.',
     networkError: 'Network error. Please check your connection.',
+    signInFailed: 'Failed to sign in',
   },
   dashboard: {
     title: 'Mr & Mrs',
@@ -152,6 +153,8 @@ export default {
     shareTitle: '{{name}} Invitation',
     basicTier: 'Basic ({{price}})',
     premiumTier: 'Premium ({{price}})',
+    saveQuestionError: 'An unexpected error occurred while saving the question',
+    sendInviteError: 'Failed to send invitation',
   },
   account: {
     title: 'Account',

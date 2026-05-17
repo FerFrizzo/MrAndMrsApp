@@ -36,6 +36,7 @@ export default {
     emailInvalid: 'Adres e-mail jest nieprawidłowy. Sprawdź i spróbuj ponownie.',
     passwordWeak: 'Hasło jest za słabe. Użyj co najmniej 6 znaków.',
     networkError: 'Błąd sieci. Sprawdź połączenie.',
+    signInFailed: 'Logowanie nie powiodło się',
   },
   dashboard: {
     title: 'On & Ona',
@@ -152,6 +153,8 @@ export default {
     shareTitle: 'Zaproszenie {{name}}',
     basicTier: 'Podstawowa ({{price}})',
     premiumTier: 'Premium ({{price}})',
+    saveQuestionError: 'Wystąpił nieoczekiwany błąd podczas zapisywania pytania',
+    sendInviteError: 'Nie udało się wysłać zaproszenia',
   },
   account: {
     title: 'Konto',

@@ -36,6 +36,7 @@ export default {
     emailInvalid: 'O endereço de e-mail é inválido. Verifique e tente novamente.',
     passwordWeak: 'A senha é muito fraca. Use pelo menos 6 caracteres.',
     networkError: 'Erro de rede. Verifique sua conexão.',
+    signInFailed: 'Falha ao entrar',
   },
   dashboard: {
     title: 'Sr & Sra',
@@ -152,6 +153,8 @@ export default {
     shareTitle: 'Convite {{name}}',
     basicTier: 'Básico ({{price}})',
     premiumTier: 'Premium ({{price}})',
+    saveQuestionError: 'Ocorreu um erro inesperado ao salvar a pergunta',
+    sendInviteError: 'Falha ao enviar convite',
   },
   account: {
     title: 'Conta',
