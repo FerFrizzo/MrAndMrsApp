@@ -28,6 +28,8 @@ import { QuestionPackagePicker } from '../components/QuestionPackagePicker';
 import { QuestionPackage } from '../data/questionPackages';
 import { useTranslation } from 'react-i18next';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { QuestionPackagePicker } from '../components/QuestionPackagePicker';
+import { QuestionPackage } from '../data/questionPackages';
 
 type CreateGameScreenProps = NativeStackScreenProps<RootStackParamList, 'CreateGame'>;
 
@@ -915,19 +917,21 @@ const styles = StyleSheet.create({
   packageButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
+    gap: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
     borderRadius: 8,
     paddingVertical: 10,
     paddingHorizontal: 14,
-    marginBottom: 14,
-    gap: 8,
+    marginBottom: 16,
     alignSelf: 'flex-start',
   },
   packageButtonText: {
-    color: Purple,
+    color: 'white',
     fontWeight: '600',
     fontSize: 14,
   },
 });
 
-export default CreateGameScreen; 
+export default CreateGameScreen;
