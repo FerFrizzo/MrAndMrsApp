@@ -28,8 +28,6 @@ import { QuestionPackagePicker } from '../components/QuestionPackagePicker';
 import { QuestionPackage } from '../data/questionPackages';
 import { useTranslation } from 'react-i18next';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { QuestionPackagePicker } from '../components/QuestionPackagePicker';
-import { QuestionPackage } from '../data/questionPackages';
 
 type CreateGameScreenProps = NativeStackScreenProps<RootStackParamList, 'CreateGame'>;
 
