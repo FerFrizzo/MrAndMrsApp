@@ -24,6 +24,8 @@ import MultipleChoiceEditor from '../components/MultipleChoiceEditor';
 import { useToast } from '../contexts/ToastContext';
 import { getProductPrices } from '../services/paymentService';
 import { PaywallModal } from '../components/PaywallModal';
+import { QuestionPackagePicker } from '../components/QuestionPackagePicker';
+import { QuestionPackage } from '../data/questionPackages';
 import { useTranslation } from 'react-i18next';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -52,6 +54,8 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
       allow_multiple_selection: false
     }
   ]);
+
+  const [packagePickerVisible, setPackagePickerVisible] = useState(false);
 
   // Game settings
   const [isPremium, setIsPremium] = useState(false);
@@ -125,6 +129,43 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
     }
     const newQuestions = questions.filter((_, i) => i !== index);
     setQuestions(newQuestions);
+  };
+
+  const handleSelectPackage = (pkg: QuestionPackage) => {
+    const name = partnerInterviewedName.trim();
+
+    const personalizeText = (text: string) => {
+      if (!name) return text;
+      return text
+        .replace(/\bI\b/g, name)
+        .replace(/\bMy\b/g, `${name}'s`)
+        .replace(/\bmy\b/g, `${name}'s`);
+    };
+
+    const personalizedQuestions = pkg.questions.map((q, i) => ({
+      ...q,
+      question_text: personalizeText(q.question_text),
+    }));
+
+    showDialog(
+      pkg.name,
+      `${pkg.questions.length} questions. What would you like to do?`,
+      [
+        { text: 'Cancel', style: 'cancel', onPress: () => {} },
+        {
+          text: 'Add to List',
+          style: 'default',
+          onPress: () => setQuestions(prev =>
+            [...prev, ...personalizedQuestions.map((q, i) => ({ ...q, order_num: prev.length + i + 1 }))]
+          ),
+        },
+        {
+          text: 'Replace All',
+          style: 'destructive',
+          onPress: () => setQuestions(personalizedQuestions.map((q, i) => ({ ...q, order_num: i + 1 }))),
+        },
+      ]
+    );
   };
 
   const validateStep = (currentStep: number): boolean => {
@@ -377,6 +418,15 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
             <Text style={styles.stepDescription}>
               {t('createGame.addQuestions', { name: partnerInterviewedName })}
             </Text>
+            <TouchableOpacity
+              style={styles.packageButton}
+              onPress={() => setPackagePickerVisible(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Browse question packages"
+            >
+              <MaterialCommunityIcons name="package-variant-closed" size={18} color={Purple} />
+              <Text style={styles.packageButtonText}>Browse Question Packages</Text>
+            </TouchableOpacity>
             {questions.map((question, index) => (
               <View key={index} style={styles.questionContainer}>
                 <TextInput
@@ -580,6 +630,11 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
           setIsPremium(false);
           finalizeGame('no');
         }}
+      />
+      <QuestionPackagePicker
+        visible={packagePickerVisible}
+        onClose={() => setPackagePickerVisible(false)}
+        onSelectPackage={handleSelectPackage}
       />
     </LinearGradient>
   );
@@ -856,6 +911,22 @@ const styles = StyleSheet.create({
   typeButtonText: {
     color: 'white',
     fontSize: 13,
+  },
+  packageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginBottom: 14,
+    gap: 8,
+    alignSelf: 'flex-start',
+  },
+  packageButtonText: {
+    color: Purple,
+    fontWeight: '600',
+    fontSize: 14,
   },
 });
 
