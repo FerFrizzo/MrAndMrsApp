@@ -23,6 +23,7 @@ import { GAME_STATUS_MAP, GameQuestion } from '../types/GameData';
 import MultipleChoiceEditor from '../components/MultipleChoiceEditor';
 import { useToast } from '../contexts/ToastContext';
 import { purchaseGame, getProductPrices } from '../services/paymentService';
+import { useTranslation } from 'react-i18next';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 type CreateGameScreenProps = NativeStackScreenProps<RootStackParamList, 'CreateGame'>;
@@ -60,6 +61,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
   }, []);
 
   const { showToast, showDialog } = useToast();
+  const { t } = useTranslation();
 
   // Hide tab bar when this screen is active
   useLayoutEffect(() => {
@@ -116,7 +118,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
 
   const removeQuestion = (index: number) => {
     if (questions.length <= 1) {
-      showToast('You must have at least one question', 'error');
+      showToast(t('createGame.atLeastOneQuestion'), 'error');
       return;
     }
     const newQuestions = questions.filter((_, i) => i !== index);
@@ -126,23 +128,23 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
   const validateStep = (currentStep: number): boolean => {
     if (currentStep === 1) {
       if (!gameName || !partnerInterviewedEmail || !partnerInterviewedName) {
-        showToast('Please fill in game name, partner interviewed name and email', 'error');
+        showToast(t('createGame.fillAllFields'), 'error');
         return false;
       }
       // Email validation: at least 3 letters, contains @ and .
       const emailRegex = /^[^@\s]{3,}[^\s]*@[^\s]+\.[^\s]+$/;
       if (!emailRegex.test(partnerInterviewedEmail)) {
-        showToast('Please enter a valid email for Partner Interviewed', 'error');
+        showToast(t('createGame.invalidEmail'), 'error');
         return false;
       }
       if (partnerPlayingEmail && !emailRegex.test(partnerPlayingEmail)) {
-        showToast('Please enter a valid email for Partner Playing', 'error');
+        showToast(t('createGame.invalidPartnerEmail'), 'error');
         return false;
       }
     } else if (currentStep === 2) {
       const emptyQuestions = questions.some(q => !q.question_text);
       if (emptyQuestions) {
-        showToast('Please fill in all questions', 'error');
+        showToast(t('createGame.fillAllQuestions'), 'error');
         return false;
       }
 
@@ -153,7 +155,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
       );
 
       if (invalidMultipleChoice) {
-        showToast('Multiple choice questions must have at least 2 options', 'error');
+        showToast(t('createGame.multipleChoiceMin'), 'error');
         return false;
       }
     }
@@ -171,7 +173,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
       if (step === 1) {
         // Create/Update game with initial details
         if (!gameName.trim() || !partnerInterviewedEmail.trim() || !partnerInterviewedName.trim()) {
-          showToast('Please fill in game name, partner interviewed name and email', 'error');
+          showToast(t('createGame.fillAllFields'), 'error');
           return;
         }
 
@@ -186,7 +188,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
         }, gameId);
 
         if (error) {
-          showToast('Failed to save game details', 'error');
+          showToast(t('createGame.failedSaveDetails'), 'error');
           return;
         }
 
@@ -197,7 +199,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
         // Validate all questions have text
         const hasEmptyQuestions = questions.some(q => !q.question_text.trim());
         if (hasEmptyQuestions) {
-          showToast('Please fill in all questions', 'error');
+          showToast(t('createGame.fillAllQuestions'), 'error');
           return;
         }
         // Validate multiple choice questions have at least 2 options
@@ -205,14 +207,14 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
           q => q.question_type === 'multiple_choice' && (!q.multiple_choice_options || q.multiple_choice_options.length < 2)
         );
         if (hasInvalidMultipleChoice) {
-          showToast('Multiple choice questions must have at least 2 options', 'error');
+          showToast(t('createGame.multipleChoiceMin'), 'error');
           return;
         }
         // Delete old questions and create new ones
         if (gameId) {
           const { game, error: fetchError } = await getGameWithQuestions(gameId);
           if (fetchError) {
-            showToast('Failed to fetch existing questions', 'error');
+            showToast(t('createGame.saveError'), 'error');
             return;
           }
           const oldQuestionIds = (game?.questions || []).map((q: any) => q.id).filter(Boolean);
@@ -226,7 +228,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
               order_num: index + 1,
             });
             if (error || !success) {
-              showToast('Failed to save question: ' + (q.question_text || ''), 'error');
+              showToast(t('createGame.failedSaveQuestion', { text: q.question_text || '' }), 'error');
               return;
             }
           }
@@ -236,7 +238,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
       setStep(step + 1);
     } catch (error) {
       console.error('Error saving game:', error);
-      showToast('An error occurred while saving', 'error');
+      showToast(t('createGame.saveError'), 'error');
     } finally {
       setLoading(false);
     }
@@ -252,12 +254,12 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
 
   const handleCreateGame = async (isPremium: boolean) => {
     if (questions.length === 0) {
-      showToast('You must have at least one question', 'error');
+      showToast(t('createGame.atLeastOneQuestion'), 'error');
       return;
     }
 
     if (!gameId) {
-      showToast('Game details not found', 'error');
+      showToast(t('createGame.saveError'), 'error');
       return;
     }
 
@@ -301,7 +303,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
                 const { success: inviteSuccess, error: inviteError } = await sendGameInvite(game.id, partnerInterviewedEmail);
 
                 if (inviteError) {
-                  showToast('Game created, but failed to send invitation: ' + inviteError.message, 'warning');
+                  showToast(t('createGame.gameCreatedInviteError', { error: inviteError.message }), 'warning');
                 } else if (inviteSuccess) {
                   try {
                     await Share.share({
@@ -312,7 +314,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
                   } catch (shareError) {
                     console.error('Share error:', shareError);
                   }
-                  showToast('Game created and invitation sent successfully!', 'success');
+                  showToast(t('createGame.gameSaved'), 'success');
                 }
               }
 
@@ -336,52 +338,52 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
       case 1:
         return (
           <View style={styles.stepContainer}>
-            <Text style={styles.stepTitle}>Game Details</Text>
+            <Text style={styles.stepTitle}>{t('createGame.gameDetails')}</Text>
 
-            <Text style={styles.label}>Game Name</Text>
+            <Text style={styles.label}>{t('createGame.gameName')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="Enter game name"
+              placeholder={t('createGame.enterGameName')}
               placeholderTextColor="#999"
               value={gameName}
               onChangeText={setGameName}
             />
 
-            <Text style={styles.label}>Partner Interviewed Name</Text>
+            <Text style={styles.label}>{t('createGame.partnerInterviewedName')}</Text>
             <TextInput
               style={styles.input}
               value={partnerInterviewedName}
               onChangeText={setPartnerInterviewedName}
-              placeholder="Enter partner interviewed's name"
+              placeholder={t('createGame.enterPartnerInterviewedName')}
               placeholderTextColor="#999"
             />
 
-            <Text style={styles.label}>Partner Interviewed Email</Text>
+            <Text style={styles.label}>{t('createGame.partnerInterviewedEmail')}</Text>
             <TextInput
               style={styles.input}
               value={partnerInterviewedEmail}
               onChangeText={setPartnerInterviewedEmail}
-              placeholder="Enter partner interviewed's email"
+              placeholder={t('createGame.enterPartnerInterviewedEmail')}
               placeholderTextColor="#999"
               keyboardType="email-address"
               autoCapitalize="none"
             />
 
-            <Text style={styles.label}>Partner Playing Name</Text>
+            <Text style={styles.label}>{t('createGame.partnerPlayingName')}</Text>
             <TextInput
               style={styles.input}
               value={partnerPlayingName}
               onChangeText={setPartnerPlayingName}
-              placeholder="Enter partner playing's name"
+              placeholder={t('createGame.enterPartnerPlayingName')}
               placeholderTextColor="#999"
             />
 
-            <Text style={styles.label}>Partner Playing Email (optional)</Text>
+            <Text style={styles.label}>{t('createGame.partnerPlayingEmail')}</Text>
             <TextInput
               style={styles.input}
               value={partnerPlayingEmail}
               onChangeText={setPartnerPlayingEmail}
-              placeholder="Enter partner playing's email (optional)"
+              placeholder={t('createGame.enterPartnerPlayingEmail')}
               placeholderTextColor="#999"
               keyboardType="email-address"
               autoCapitalize="none"
@@ -392,9 +394,9 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
       case 2:
         return (
           <View style={styles.stepContainer}>
-            <Text style={styles.stepTitle}>Questions</Text>
+            <Text style={styles.stepTitle}>{t('createGame.questions')}</Text>
             <Text style={styles.stepDescription}>
-              Add questions {partnerInterviewedName} should answer before the game
+              {t('createGame.addQuestions', { name: partnerInterviewedName })}
             </Text>
             {questions.map((question, index) => (
               <View key={index} style={styles.questionContainer}>
@@ -408,7 +410,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
                 />
 
                 <View style={styles.questionTypeContainer}>
-                  <Text style={styles.questionTypeLabel}>Question Type:</Text>
+                  <Text style={styles.questionTypeLabel}>{t('createGame.questionType')}</Text>
                   <View style={styles.typeButtonsContainer}>
                     <TouchableOpacity
                       style={[
@@ -421,7 +423,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
                         styles.typeButtonText,
                         question.question_type === 'text' && styles.typeButtonTextActive
                       ]}>
-                        Text
+                        {t('createGame.text')}
                       </Text>
                     </TouchableOpacity>
 
@@ -436,7 +438,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
                         styles.typeButtonText,
                         question.question_type === 'multiple_choice' && styles.typeButtonTextActive
                       ]}>
-                        Multiple Choice
+                        {t('createGame.multipleChoice')}
                       </Text>
                     </TouchableOpacity>
 
@@ -451,7 +453,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
                         styles.typeButtonText,
                         question.question_type === 'true_false' && styles.typeButtonTextActive
                       ]}>
-                        True/False
+                        {t('createGame.trueFalse')}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -481,7 +483,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
               style={styles.addButton}
               onPress={addQuestion}
             >
-              <Text style={styles.addButtonText}>Add Question</Text>
+              <Text style={styles.addButtonText}>{t('createGame.addQuestion')}</Text>
             </TouchableOpacity>
           </View>
         );
@@ -489,10 +491,10 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
       case 3:
         return (
           <View style={styles.stepContainer}>
-            <Text style={styles.stepTitle}>Game Settings</Text>
+            <Text style={styles.stepTitle}>{t('createGame.gameSettings')}</Text>
 
             <View style={styles.optionContainer}>
-              <Text style={styles.optionLabel}>Premium Game</Text>
+              <Text style={styles.optionLabel}>{t('createGame.premiumGame')}</Text>
               <TouchableOpacity
                 style={[
                   styles.toggle,
@@ -508,18 +510,18 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
             </View>
 
             <Text style={styles.premiumNote}>
-              Premium games cost {prices.premium} and allow you to answer questions with images and videos!
+              {t('createGame.premiumNote', { price: prices.premium })}
             </Text>
 
             <View style={styles.summaryContainer}>
-              <Text style={styles.summaryTitle}>Summary</Text>
-              <Text style={styles.summaryItem}>Game: {gameName}</Text>
-              <Text style={styles.summaryItem}>Partner Interviewed: {partnerInterviewedEmail}</Text>
-              <Text style={styles.summaryItem}>Partner Playing: {partnerPlayingEmail}</Text>
-              <Text style={styles.summaryItem}>Questions: {questions.length}</Text>
-              <Text style={styles.summaryItem}>Type: {isPremium ? 'Premium' : 'Basic'}</Text>
+              <Text style={styles.summaryTitle}>{t('createGame.summary')}</Text>
+              <Text style={styles.summaryItem}>{`${t('createGame.game')}: ${gameName}`}</Text>
+              <Text style={styles.summaryItem}>{`${t('createGame.partnerInterviewed')}: ${partnerInterviewedEmail}`}</Text>
+              <Text style={styles.summaryItem}>{`${t('createGame.partnerPlaying')}: ${partnerPlayingEmail}`}</Text>
+              <Text style={styles.summaryItem}>{`${t('createGame.questionsCount')}: ${questions.length}`}</Text>
+              <Text style={styles.summaryItem}>Type: {isPremium ? t('createGame.premium') : t('createGame.standard')}</Text>
               <Text style={styles.summaryItem}>
-                Price: {isPremium ? prices.premium : prices.basic}
+                {`${t('createGame.price')}: ${isPremium ? prices.premium : prices.basic}`}
               </Text>
             </View>
 
@@ -570,7 +572,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
               <ActivityIndicator color={Purple} />
             ) : (
               <Text style={styles.nextButtonText}>
-                {step === 3 ? 'Create Game' : 'Next'}
+                {step === 3 ? t('createGame.createGame') : t('createGame.next')}
               </Text>
             )}
           </TouchableOpacity>
