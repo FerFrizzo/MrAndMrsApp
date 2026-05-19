@@ -118,11 +118,14 @@ serve(async (req: Request) => {
     
     // For testing, use a universal link format
     
-    let universalLink 
+    const appStoreLink = `https://apps.apple.com/app/id6751817234`
+    const playStoreLink = `https://play.google.com/store/apps/details?id=com.ferfrizzo.MrAndMrsApp`
+
+    let universalLink
     if (!platform || platform === 'android') {
-      universalLink = `https://play.google.com/store/apps/details?id=com.ferfrizzo.MrAndMrsApp` 
+      universalLink = playStoreLink
     } else {
-      universalLink = `https://apps.apple.com/us/app/id123456789`
+      universalLink = appStoreLink
     }
 
     // Prepare the email content
@@ -145,7 +148,7 @@ serve(async (req: Request) => {
             
             <p style="font-size: 14px; color: #666;">If the button doesn't work, you can also open the app and enter this code: <strong>${accessCode}</strong></p>
             
-            <p style="font-size: 14px; color: #666;">Don't have the app yet? Download it from the <a href="https://play.google.com/store/apps/details?id=com.ferfrizzo.MrAndMrsApp">Google Play Store</a>.</p>
+            <p style="font-size: 14px; color: #666;">Don't have the app yet? Download it from the <a href="${appStoreLink}">App Store</a> or <a href="${playStoreLink}">Google Play</a>.</p>
             
             <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #999; text-align: center;">
               <p>This is an automated email. Please do not reply.</p>
