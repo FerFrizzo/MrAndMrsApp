@@ -1,6 +1,6 @@
 import { supabase } from '../config/supabaseClient';
 import { launchImageLibraryAsync, MediaType, requestMediaLibraryPermissionsAsync } from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 
 export interface MediaFile {
   uri: string;
