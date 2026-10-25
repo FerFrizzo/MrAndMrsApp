@@ -1,4 +1,9 @@
-import { isInvitedPartnerBeforeAnswering, normalizeEmail, sameEmail } from "./partnerEmail";
+import {
+  exactEmailPattern,
+  isInvitedPartnerBeforeAnswering,
+  normalizeEmail,
+  sameEmail,
+} from "./partnerEmail";
 
 describe("normalizeEmail", () => {
   it("trims and lowercases", () => {
@@ -39,5 +44,19 @@ describe("isInvitedPartnerBeforeAnswering", () => {
     expect(
       isInvitedPartnerBeforeAnswering({ ...game, status: "in_creation" }, "partner", "ana@example.com"),
     ).toBe(false);
+  });
+});
+
+describe("exactEmailPattern", () => {
+  it("normalises and escapes LIKE wildcards so they match literally", () => {
+    expect(exactEmailPattern(" Ana_Silva@Example.com ")).toBe("ana\\_silva@example.com");
+    expect(exactEmailPattern("100%@x.com")).toBe("100\\%@x.com");
+    expect(exactEmailPattern("a\\b@x.com")).toBe("a\\\\b@x.com");
+  });
+
+  it("refuses addresses PostgREST cannot match exactly", () => {
+    expect(exactEmailPattern("a*b@x.com")).toBeNull();
+    expect(exactEmailPattern("")).toBeNull();
+    expect(exactEmailPattern(null)).toBeNull();
   });
 });
