@@ -23,6 +23,7 @@ import { useToast } from '../contexts/ToastContext';
 import { supabase } from '../config/supabaseClient';
 import { PaywallModal } from '../components/PaywallModal';
 import { useTranslation } from 'react-i18next';
+import { sameEmail } from '../features/game/partnerEmail';
 
 type GameDetailsScreenProps = NativeStackScreenProps<RootStackParamList, 'GameDetails' | 'GameQuestion'>;
 
@@ -570,7 +571,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
 
               </View>
 
-              {game.partner_interviewed_email !== currentUserEmail && (
+              {!sameEmail(game.partner_interviewed_email, currentUserEmail) && (
                 <View style={styles.questionsSection}>
                   <Text style={styles.sectionTitle}>{t('gameDetails.questionsCount', { count: questions.length })}</Text>
                   {questions.map((question, index) => (
@@ -668,7 +669,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
                     )}
                   </TouchableOpacity>
                 )
-              ) : (game.partner_interviewed_email === currentUserEmail && game.status !== 'in_creation') ? (
+              ) : (sameEmail(game.partner_interviewed_email, currentUserEmail) && game.status !== 'in_creation') ? (
                 <TouchableOpacity
                   style={styles.playButton}
                   onPress={async () => {

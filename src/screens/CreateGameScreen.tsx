@@ -28,6 +28,7 @@ import { QuestionPackagePicker } from '../components/QuestionPackagePicker';
 import { QuestionPackage } from '../data/questionPackages';
 import { useTranslation } from 'react-i18next';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { normalizeEmail } from '../features/game/partnerEmail';
 
 type CreateGameScreenProps = NativeStackScreenProps<RootStackParamList, 'CreateGame'>;
 
@@ -222,7 +223,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
 
         const { game, error } = await createOrUpdateGame({
           game_name: gameName.trim(),
-          partner_interviewed_email: partnerInterviewedEmail.trim(),
+          partner_interviewed_email: normalizeEmail(partnerInterviewedEmail),
           partner_interviewed_name: partnerInterviewedName.trim(),
           partner_playing_email: partnerPlayingEmail.trim() || undefined,
           partner_playing_name: partnerPlayingName.trim() || undefined,
@@ -304,9 +305,9 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
       setLoading(true);
       const { game, error } = await updateGameData({
         game_name: gameName.trim(),
-        partner_interviewed_email: partnerInterviewedEmail.trim(),
+        partner_interviewed_email: normalizeEmail(partnerInterviewedEmail),
         partner_interviewed_name: partnerInterviewedName.trim(),
-        partner_playing_email: partnerPlayingEmail.trim() || undefined,
+        partner_playing_email: normalizeEmail(partnerPlayingEmail) || undefined,
         partner_playing_name: partnerPlayingName.trim() || undefined,
         status: 'ready_to_play',
         is_paid: tier,
@@ -315,7 +316,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
       if (error) throw error;
 
       if (game?.id) {
-        const { success: inviteSuccess, error: inviteError } = await sendGameInvite(game.id, partnerInterviewedEmail);
+        const { success: inviteSuccess, error: inviteError } = await sendGameInvite(game.id, normalizeEmail(partnerInterviewedEmail));
         if (inviteError) {
           showToast(t('createGame.gameCreatedInviteError', { error: inviteError.message }), 'warning');
         } else if (inviteSuccess) {
