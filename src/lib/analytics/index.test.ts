@@ -95,6 +95,14 @@ describe("initAnalytics", () => {
     );
   });
 
+  it("does not preload feature flags (the app uses none)", async () => {
+    await initAnalytics(enabled);
+    expect(mockCtor).toHaveBeenCalledWith(
+      "phc_test",
+      expect.objectContaining({ preloadFeatureFlags: false }),
+    );
+  });
+
   it("does nothing when disabled, and track is then a no-op", async () => {
     await initAnalytics({ ...enabled, apiKey: "" });
     track("game_created", { from_package: false });

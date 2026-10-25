@@ -89,6 +89,9 @@ export async function initAnalytics(config: AnalyticsConfig = readConfig()): Pro
       // Project-level "Discard client IP data" still runs GeoIP first; this
       // tags every event with $geoip_disable so no location is derived.
       disableGeoip: true,
+      // The app uses no feature flags; skip the /flags request on every launch
+      // (flag requests are metered separately).
+      preloadFeatureFlags: false,
     });
     if (optedOut) await client.optOut();
     if (currentUid) client.identify(currentUid);
