@@ -18,6 +18,7 @@ import { RootStackParamList } from '../types/RootStackParamList';
 import { useAuth } from '../context/AuthContext';
 import { Purple, PurpleLight } from '../utils/Colors';
 import { signInWithEmail } from '../services/authService';
+import { reportAuthError, trackAuthResult } from '../features/auth/trackAuth';
 import SignInWithGoogle from '../components/SignInWithGoogle';
 import SignInWithApple from '../components/SignInWithApple';
 import { useToast } from '../contexts/ToastContext';
@@ -45,10 +46,12 @@ const SignInScreen: React.FC<SignInScreenProps> = ({ navigation }) => {
       if (error) throw error;
       if (data?.user) {
         setUser(data.user);
+        trackAuthResult(false, 'email');
       } else {
         throw new Error('No user data returned');
       }
     } catch (error: any) {
+      reportAuthError(error, 'email');
       showToast(error.message || t('auth.signInFailed'), 'error');
     } finally {
       setLoading(false);

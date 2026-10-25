@@ -10,9 +10,13 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Purple } from '../utils/Colors';
 import { getProductPrices, purchaseGame } from '../services/paymentService';
+import type { PaywallSource } from '../lib/analytics';
+import { usePaywallTracking } from '../features/paywall/usePaywallTracking';
+import { parsePaywallSource } from '../lib/analytics/paywallSource';
 
 interface PaywallModalProps {
   visible: boolean;
+  source?: PaywallSource | string;
   onUpgradeSuccess: () => void;
   onContinueFree: () => void;
 }
@@ -25,11 +29,14 @@ const PREMIUM_FEATURES = [
 
 export const PaywallModal: React.FC<PaywallModalProps> = ({
   visible,
+  source = 'unknown',
   onUpgradeSuccess,
   onContinueFree,
 }) => {
   const [price, setPrice] = useState('—');
   const [purchasing, setPurchasing] = useState(false);
+  const paywallSource = parsePaywallSource(source);
+  const tracking = usePaywallTracking(paywallSource, visible);
 
   useEffect(() => {
     if (visible) {
@@ -42,12 +49,13 @@ export const PaywallModal: React.FC<PaywallModalProps> = ({
   const handleUpgrade = async () => {
     setPurchasing(true);
     try {
-      await purchaseGame();
+      const { productId } = await purchaseGame();
+      tracking.onPurchaseCompleted(productId);
       onUpgradeSuccess();
     } catch (e: any) {
-      if (!e?.message?.toLowerCase().includes('cancel')) {
-        // Non-cancellation error — StoreKit already surfaces its own UI
-      }
+      // Cancellations and failures are tracked separately. Non-cancellation
+      // errors need no UI here — StoreKit already surfaces its own.
+      tracking.onPurchaseFailed(e);
     } finally {
       setPurchasing(false);
     }
@@ -58,7 +66,10 @@ export const PaywallModal: React.FC<PaywallModalProps> = ({
       visible={visible}
       animationType="slide"
       transparent
-      onRequestClose={onContinueFree}
+      onRequestClose={() => {
+        tracking.onDismissed();
+        onContinueFree();
+      }}
     >
       <View style={styles.overlay}>
         <View style={styles.sheet}>
@@ -95,7 +106,10 @@ export const PaywallModal: React.FC<PaywallModalProps> = ({
 
           <TouchableOpacity
             style={styles.freeButton}
-            onPress={onContinueFree}
+            onPress={() => {
+              tracking.onDismissed();
+              onContinueFree();
+            }}
             disabled={purchasing}
           >
             <Text style={styles.freeButtonText}>Continue with free game</Text>

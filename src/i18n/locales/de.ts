@@ -177,6 +177,9 @@ export default {
     errorLoadingProfile: 'Beim Laden des Profils ist ein Fehler aufgetreten',
     failedDeleteAccount: 'Konto konnte nicht gelöscht werden. Bitte erneut versuchen.',
     unexpectedError: 'Ein unerwarteter Fehler ist aufgetreten. Bitte erneut versuchen.',
+    privacy: 'Datenschutz',
+    shareUsageData: 'Nutzungsdaten teilen',
+    shareUsageDataHelp: 'Hilft, Mr & Mrs zu verbessern. Enthält nie Fragen, Antworten, Namen oder E-Mails.',
   },
   howToPlay: {
     bridesmaidsGroomsmen: 'Trauzeugin/Trauzeuge',

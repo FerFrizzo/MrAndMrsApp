@@ -1,6 +1,7 @@
 // src/navigation/AppNavigator.js
-import React, { useState, useEffect } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import React, { useState, useEffect, useRef } from 'react';
+import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
+import { emitNavigationState } from '../lib/analytics/navigationBridge';
 import { createStackNavigator } from '@react-navigation/stack';
 import { ActivityIndicator, View } from 'react-native';
 import { supabase } from '../config/supabaseClient';
@@ -55,6 +56,7 @@ const MainAppNavigator = () => (
 const AppNavigator = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigationRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
 
   useEffect(() => {
     // Set up the auth state listener
@@ -89,7 +91,11 @@ const AppNavigator = () => {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer
+      ref={navigationRef}
+      onReady={() => emitNavigationState(navigationRef.current?.getRootState())}
+      onStateChange={(state) => emitNavigationState(state)}
+    >
       {session ? <MainAppNavigator /> : <AuthNavigator />}
     </NavigationContainer>
   );

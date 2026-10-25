@@ -177,6 +177,9 @@ export default {
     errorLoadingProfile: 'Une erreur est survenue lors du chargement du profil',
     failedDeleteAccount: 'Échec de la suppression du compte. Veuillez réessayer.',
     unexpectedError: 'Une erreur inattendue est survenue. Veuillez réessayer.',
+    privacy: 'Confidentialité',
+    shareUsageData: 'Partager les données d’utilisation',
+    shareUsageDataHelp: 'Aide à améliorer Mr & Mrs. N’inclut jamais les questions, les réponses, les noms ou les e-mails.',
   },
   howToPlay: {
     bridesmaidsGroomsmen: "Demoiselle/Garçon d'honneur",

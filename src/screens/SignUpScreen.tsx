@@ -18,6 +18,7 @@ import { RootStackParamList } from '../types/RootStackParamList';
 import { useAuth } from '../context/AuthContext';
 import { Purple, PurpleLight } from '../utils/Colors';
 import { signUpWithEmail } from '../services/authService';
+import { reportAuthError, trackEmailSignUp } from '../features/auth/trackAuth';
 import { useToast } from '../contexts/ToastContext';
 import { useTranslation } from 'react-i18next';
 
@@ -71,9 +72,11 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
                 throw error;
               }
 
+              trackEmailSignUp(data);
               showToast(t('auth.accountCreated'), 'success');
               navigation.navigate('SignIn');
             } catch (error: any) {
+              reportAuthError(error, 'email');
               console.error("Sign up error:", error);
 
               let errorMessage = t('auth.signUpFailed');

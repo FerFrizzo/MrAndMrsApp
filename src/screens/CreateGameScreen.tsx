@@ -1,4 +1,4 @@
-import React, { useState, useLayoutEffect, useEffect } from 'react';
+import React, { useState, useLayoutEffect, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -28,6 +28,9 @@ import { QuestionPackagePicker } from '../components/QuestionPackagePicker';
 import { QuestionPackage } from '../data/questionPackages';
 import { useTranslation } from 'react-i18next';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { track } from '../lib/analytics';
+import { gameCreatedProps, parseQuestionPackageId, questionCountBucket } from '../lib/analytics/buckets';
+import type { QuestionPackageId } from '../lib/analytics/events';
 import { normalizeEmail } from '../features/game/partnerEmail';
 
 type CreateGameScreenProps = NativeStackScreenProps<RootStackParamList, 'CreateGame'>;
@@ -57,6 +60,8 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
   ]);
 
   const [packagePickerVisible, setPackagePickerVisible] = useState(false);
+  const [selectedPackageId, setSelectedPackageId] = useState<QuestionPackageId | null>(null);
+  const gameCreatedTracked = useRef(false);
 
   // Game settings
   const [isPremium, setIsPremium] = useState(route.params?.premium ?? false);
@@ -156,14 +161,20 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
         {
           text: 'Add to List',
           style: 'default',
-          onPress: () => setQuestions(prev =>
-            [...prev, ...personalizedQuestions.map((q, i) => ({ ...q, order_num: prev.length + i + 1 }))]
-          ),
+          onPress: () => {
+            setSelectedPackageId(parseQuestionPackageId(pkg.id));
+            setQuestions(prev =>
+              [...prev, ...personalizedQuestions.map((q, i) => ({ ...q, order_num: prev.length + i + 1 }))]
+            );
+          },
         },
         {
           text: 'Replace All',
           style: 'destructive',
-          onPress: () => setQuestions(personalizedQuestions.map((q, i) => ({ ...q, order_num: i + 1 }))),
+          onPress: () => {
+            setSelectedPackageId(parseQuestionPackageId(pkg.id));
+            setQuestions(personalizedQuestions.map((q, i) => ({ ...q, order_num: i + 1 })));
+          },
         },
       ]
     );
@@ -276,6 +287,8 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
               return;
             }
           }
+          const bucket = questionCountBucket(questions.length);
+          if (bucket) track('questions_saved', { count_bucket: bucket });
         }
       }
 
@@ -301,6 +314,9 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
       showToast(t('createGame.saveError'), 'error');
       return;
     }
+    // Set once the game row says premium, so a later invite error is not
+    // mistaken for a failed grant.
+    let premiumGranted = false;
     try {
       setLoading(true);
       const { game, error } = await updateGameData({
@@ -315,11 +331,23 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
 
       if (error) throw error;
 
+      if (tier === 'premium') {
+        premiumGranted = true;
+        track('premium_granted', { source: 'create_game' });
+      }
+
+      if (!gameCreatedTracked.current) {
+        gameCreatedTracked.current = true;
+        track('game_created', gameCreatedProps(selectedPackageId));
+      }
+
       if (game?.id) {
         const { success: inviteSuccess, error: inviteError } = await sendGameInvite(game.id, normalizeEmail(partnerInterviewedEmail));
         if (inviteError) {
+          track('invite_failed', { from: 'create_game' });
           showToast(t('createGame.gameCreatedInviteError', { error: inviteError.message }), 'warning');
         } else if (inviteSuccess) {
+          track('invite_sent', { channel: 'email', from: 'create_game' });
           try {
             await Share.share({
               message: t('createGame.shareMessage'),
@@ -331,6 +359,10 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
       }
       navigation.navigate('Dashboard');
     } catch (error: any) {
+      // The user has already paid for this game; this is the money leak to watch.
+      if (tier === 'premium' && !premiumGranted) {
+        track('premium_grant_failed', { source: 'create_game' });
+      }
       showToast(error.message || t('createGame.paymentFailed'), 'error');
     } finally {
       setLoading(false);
@@ -622,6 +654,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
       </SafeAreaView>
       <PaywallModal
         visible={paywallVisible}
+        source="create_game"
         onUpgradeSuccess={() => {
           setPaywallVisible(false);
           finalizeGame('premium');

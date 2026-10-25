@@ -10,6 +10,21 @@ export function sameEmail(a: string | null | undefined, b: string | null | undef
   return left !== "" && left === normalizeEmail(b);
 }
 
+type InviteGame = { creator_id?: string; partner_interviewed_email?: string; status?: string | null };
+
+// The invite has been sent (ready_to_play) and the partner has not answered.
+export function isInvitedPartnerBeforeAnswering(
+  game: InviteGame,
+  userId: string,
+  userEmail: string | null | undefined,
+): boolean {
+  return (
+    game.creator_id !== userId &&
+    sameEmail(game.partner_interviewed_email, userEmail) &&
+    game.status === "ready_to_play"
+  );
+}
+
 // Pattern for a case-insensitive exact match with PostgREST .ilike(). Rows
 // saved before emails were normalised may be mixed case, so .eq() misses them.
 // `\`, `%` and `_` are escaped so they match literally (`_` is common in

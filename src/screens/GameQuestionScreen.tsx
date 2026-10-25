@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,8 @@ import { MediaFile } from '../services/mediaService';
 import MediaUpload from '../components/MediaUpload';
 import { useToast } from '../contexts/ToastContext';
 import { z } from 'zod';
+import { useAuth } from '../context/AuthContext';
+import { track } from '../lib/analytics';
 
 interface AnswerMap {
   [questionId: string]: string | string[] | boolean;
@@ -35,6 +37,8 @@ type GameQuestionScreenProps = NativeStackScreenProps<RootStackParamList, 'GameQ
 function GameQuestionScreen({ route, navigation }: GameQuestionScreenProps) {
   const { gameId } = route.params;
   const { showToast } = useToast();
+  const { user } = useAuth();
+  const gameStartedTracked = useRef(false);
   const [questions, setQuestions] = useState<GameQuestion[]>([]);
   const [game, setGame] = useState<GameData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -50,6 +54,12 @@ function GameQuestionScreen({ route, navigation }: GameQuestionScreenProps) {
   useEffect(() => {
     fetchQuestions();
   }, [gameId]);
+
+  useEffect(() => {
+    if (gameStartedTracked.current || !game || !user?.id) return;
+    gameStartedTracked.current = true;
+    track('game_started', { role: user.id === game.creator_id ? 'creator' : 'partner' });
+  }, [game, user?.id]);
 
   async function fetchQuestions() {
     setLoading(true);
@@ -267,8 +277,11 @@ function GameQuestionScreen({ route, navigation }: GameQuestionScreenProps) {
       });
       const { error } = await submitAnswers(gameId, apiAnswers, false);
       if (error) throw error;
+      const hasMedia = Object.values(mediaFiles).some((file) => file != null);
+      track('game_answered', { has_media: hasMedia });
       navigation.replace('GameDetails', { gameId });
     } catch (err: any) {
+      track('answers_submit_failed');
       console.error('error submitting answers');
       setError(err.message || 'Failed to submit answers');
     } finally {

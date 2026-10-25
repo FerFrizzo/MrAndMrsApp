@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -23,7 +23,8 @@ import { useToast } from '../contexts/ToastContext';
 import { supabase } from '../config/supabaseClient';
 import { PaywallModal } from '../components/PaywallModal';
 import { useTranslation } from 'react-i18next';
-import { sameEmail } from '../features/game/partnerEmail';
+import { track } from '../lib/analytics';
+import { isInvitedPartnerBeforeAnswering, sameEmail } from '../features/game/partnerEmail';
 
 type GameDetailsScreenProps = NativeStackScreenProps<RootStackParamList, 'GameDetails' | 'GameQuestion'>;
 
@@ -49,6 +50,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [paywallVisible, setPaywallVisible] = useState(false);
+  const inviteOpenedTracked = useRef(false);
   useEffect(() => {
     fetchGameDetails();
   }, [gameId]);
@@ -68,6 +70,13 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
       setCurrentUserEmail(data?.user?.email ?? null);
     });
   }, []);
+
+  useEffect(() => {
+    if (inviteOpenedTracked.current || !game || !currentUserId || !currentUserEmail) return;
+    if (!isInvitedPartnerBeforeAnswering(game, currentUserId, currentUserEmail)) return;
+    inviteOpenedTracked.current = true;
+    track('invite_opened');
+  }, [game, currentUserId, currentUserEmail]);
 
   const fetchGameDetails = async () => {
     setLoading(true);
@@ -314,6 +323,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
               if (error) throw error;
 
               if (success) {
+                track('invite_sent', { channel: 'email', from: 'game_details' });
                 try {
                   await Share.share({
                     message: t('gameDetails.shareMessage'),
@@ -326,6 +336,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
                 showToast(t('gameDetails.invitationSent', { email: game.partner_interviewed_email }), 'success');
               }
             } catch (error: any) {
+              track('invite_failed', { from: 'game_details' });
               showToast(error.message || t('gameDetails.sendInviteError'), 'error');
             } finally {
               setSendingInvite(false);
@@ -691,14 +702,18 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
       {renderQuestionModal()}
       <PaywallModal
         visible={paywallVisible}
+        source="game_details_upgrade"
         onUpgradeSuccess={async () => {
           setPaywallVisible(false);
           try {
             const { error } = await updateGameStatusAndIsPaid('ready_to_play', 'premium', game?.id);
             if (error) throw error;
+            track('premium_granted', { source: 'game_details_upgrade' });
             showToast('Premium game is ready to play!', 'success');
             await fetchGameDetails();
           } catch (error: any) {
+            // The user has already paid for this upgrade.
+            track('premium_grant_failed', { source: 'game_details_upgrade' });
             showToast(error.message || 'Failed to update game', 'error');
           }
         }}

@@ -21,6 +21,7 @@ import { useToast } from '../contexts/ToastContext';
 import { Dialog } from '../components/Dialog';
 import { deleteAccount, signOut } from '../services/authService';
 import { useTranslation } from 'react-i18next';
+import { UsageDataToggle } from '../components/UsageDataToggle';
 
 type AccountScreenProps = NativeStackScreenProps<RootStackParamList, 'Account'>;
 
@@ -171,6 +172,8 @@ const AccountScreen: React.FC<AccountScreenProps> = ({ navigation }) => {
                 </View>
               </View>
             </View>
+
+            <UsageDataToggle />
           </ScrollView>
 
           <TouchableOpacity

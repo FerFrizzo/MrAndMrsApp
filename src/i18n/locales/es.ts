@@ -177,6 +177,9 @@ export default {
     errorLoadingProfile: 'Ocurrió un error al cargar el perfil',
     failedDeleteAccount: 'Error al eliminar la cuenta. Inténtalo de nuevo.',
     unexpectedError: 'Ocurrió un error inesperado. Inténtalo de nuevo.',
+    privacy: 'Privacidad',
+    shareUsageData: 'Compartir datos de uso',
+    shareUsageDataHelp: 'Ayuda a mejorar Mr & Mrs. Nunca incluye preguntas, respuestas, nombres ni correos.',
   },
   howToPlay: {
     bridesmaidsGroomsmen: 'Dama/Padrino',

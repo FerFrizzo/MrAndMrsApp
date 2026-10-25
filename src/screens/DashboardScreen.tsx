@@ -24,6 +24,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Menu, Provider, Button } from 'react-native-paper';
 import { getProductPrices } from '../services/paymentService';
 import { useTranslation } from 'react-i18next';
+import { usePaywallTracking } from '../features/paywall/usePaywallTracking';
 
 type DashboardScreenProps = NativeStackScreenProps<RootStackParamList, 'Dashboard'>;
 
@@ -47,11 +48,12 @@ interface PricingModalProps {
   onCreatePremium: () => void;
 }
 
-const PricingModal: React.FC<PricingModalProps> = ({ visible, onClose, onCreatePremium }) => {
+export const PricingModal: React.FC<PricingModalProps> = ({ visible, onClose, onCreatePremium }) => {
   const { t } = useTranslation();
   const [premiumPrice, setPremiumPrice] = useState<string | null>(null);
   const [pricesLoading, setPricesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const tracking = usePaywallTracking('dashboard_pricing', visible);
 
   const fetchPrices = async () => {
     setPricesLoading(true);
@@ -75,15 +77,20 @@ const PricingModal: React.FC<PricingModalProps> = ({ visible, onClose, onCreateP
   // A purchase is only granted against a game (CreateGame / GameDetails set
   // is_paid). Buying here unlocked nothing, so this sheet only shows the price
   // and sends the user to create a premium game, where they pay.
+  const handleClose = () => {
+    tracking.onDismissed();
+    onClose();
+  };
+
   const priceUnavailable = premiumPrice === '—';
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
       <View style={pricingStyles.overlay}>
         <View style={pricingStyles.sheet}>
           <View style={pricingStyles.header}>
             <Text style={pricingStyles.title}>{t('pricing.title')}</Text>
-            <TouchableOpacity onPress={onClose} style={pricingStyles.closeButton}>
+            <TouchableOpacity onPress={handleClose} style={pricingStyles.closeButton}>
               <MaterialCommunityIcons name="close" size={22} color="#555" />
             </TouchableOpacity>
           </View>

@@ -177,6 +177,9 @@ export default {
     errorLoadingProfile: 'Si è verificato un errore durante il caricamento del profilo',
     failedDeleteAccount: "Impossibile eliminare l'account. Riprova.",
     unexpectedError: 'Si è verificato un errore imprevisto. Riprova.',
+    privacy: 'Privacy',
+    shareUsageData: 'Condividi i dati di utilizzo',
+    shareUsageDataHelp: 'Aiuta a migliorare Mr & Mrs. Non include mai domande, risposte, nomi o email.',
   },
   howToPlay: {
     bridesmaidsGroomsmen: 'Damigella/Testimone',
