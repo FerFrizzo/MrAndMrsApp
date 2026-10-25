@@ -3,7 +3,7 @@
 // enums, booleans, buckets, and route templates — never names, emails,
 // question text, answers, media URLs, access codes, or game/user UUIDs.
 
-export type PaywallSource = "create_game" | "media_upload" | "account" | "unknown";
+export type PaywallSource = "create_game" | "game_details_upgrade" | "dashboard_pricing" | "unknown";
 
 export type AuthMethod = "email" | "google" | "apple";
 

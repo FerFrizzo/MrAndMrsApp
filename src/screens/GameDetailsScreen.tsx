@@ -704,7 +704,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
       {renderQuestionModal()}
       <PaywallModal
         visible={paywallVisible}
-        source="media_upload"
+        source="game_details_upgrade"
         onUpgradeSuccess={async () => {
           setPaywallVisible(false);
           try {

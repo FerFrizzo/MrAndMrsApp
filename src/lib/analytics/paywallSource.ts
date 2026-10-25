@@ -2,8 +2,8 @@ import type { PaywallSource } from "./events";
 
 export const PAYWALL_SOURCES: readonly PaywallSource[] = [
   "create_game",
-  "media_upload",
-  "account",
+  "game_details_upgrade",
+  "dashboard_pricing",
   "unknown",
 ];
 

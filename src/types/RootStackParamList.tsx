@@ -3,7 +3,7 @@ export type RootStackParamList = {
   SignUp: undefined;
   PasswordRecovery: undefined;
   Dashboard: undefined;
-  CreateGame: undefined;
+  CreateGame: { premium?: boolean } | undefined;
   GameQuestion: { gameId: string };
   GameDetails: { gameId: string };
   MainTabs: undefined;

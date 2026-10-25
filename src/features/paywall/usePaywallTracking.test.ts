@@ -23,14 +23,14 @@ describe("usePaywallTracking", () => {
   });
 
   it("tracks purchase and dismiss with the source and product id", () => {
-    const { result } = renderHook(() => usePaywallTracking("account", true));
+    const { result } = renderHook(() => usePaywallTracking("dashboard_pricing", true));
     result.current.onPurchaseCompleted("com.ferfrizzo.MrAndMrsApp.premium_game");
     result.current.onDismissed();
     expect(mockTrack).toHaveBeenCalledWith("purchase_completed", {
-      source: "account",
+      source: "dashboard_pricing",
       product_id: "com.ferfrizzo.MrAndMrsApp.premium_game",
     });
-    expect(mockTrack).toHaveBeenCalledWith("paywall_dismissed", { source: "account" });
+    expect(mockTrack).toHaveBeenCalledWith("paywall_dismissed", { source: "dashboard_pricing" });
     expect(JSON.stringify(mockTrack.mock.calls)).not.toMatch(/price|\$/);
   });
 });
