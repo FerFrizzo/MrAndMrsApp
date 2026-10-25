@@ -22,7 +22,7 @@ import { GameCard } from '../components/GameCard';
 import { GamesSection } from '../components/GamesSection';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Menu, Provider, Button } from 'react-native-paper';
-import { getProductPrices, purchaseGame } from '../services/paymentService';
+import { getProductPrices } from '../services/paymentService';
 import { useTranslation } from 'react-i18next';
 
 type DashboardScreenProps = NativeStackScreenProps<RootStackParamList, 'Dashboard'>;
@@ -44,13 +44,13 @@ interface HowToPlayModalProps {
 interface PricingModalProps {
   visible: boolean;
   onClose: () => void;
+  onCreatePremium: () => void;
 }
 
-const PricingModal: React.FC<PricingModalProps> = ({ visible, onClose }) => {
+const PricingModal: React.FC<PricingModalProps> = ({ visible, onClose, onCreatePremium }) => {
   const { t } = useTranslation();
   const [premiumPrice, setPremiumPrice] = useState<string | null>(null);
   const [pricesLoading, setPricesLoading] = useState(false);
-  const [purchasing, setPurchasing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchPrices = async () => {
@@ -72,19 +72,9 @@ const PricingModal: React.FC<PricingModalProps> = ({ visible, onClose }) => {
     }
   }, [visible]);
 
-  const handleBuy = async () => {
-    setPurchasing(true);
-    try {
-      await purchaseGame();
-    } catch (e: any) {
-      if (!e?.message?.includes('cancelled') && !e?.message?.includes('cancel')) {
-        setError(e?.message || t('pricing.purchaseFailed'));
-      }
-    } finally {
-      setPurchasing(false);
-    }
-  };
-
+  // A purchase is only granted against a game (CreateGame / GameDetails set
+  // is_paid). Buying here unlocked nothing, so this sheet only shows the price
+  // and sends the user to create a premium game, where they pay.
   const priceUnavailable = premiumPrice === '—';
 
   return (
@@ -120,15 +110,6 @@ const PricingModal: React.FC<PricingModalProps> = ({ visible, onClose }) => {
 
           {!pricesLoading && !error && premiumPrice !== null && (
             <>
-              {priceUnavailable && (
-                <View style={pricingStyles.sandboxNote}>
-                  <MaterialCommunityIcons name="information-outline" size={16} color="#8A4FFF" />
-                  <Text style={pricingStyles.sandboxText}>
-                    {t('pricing.sandboxNote')}
-                  </Text>
-                </View>
-              )}
-
               <View style={pricingStyles.tier}>
                 <View style={pricingStyles.tierInfo}>
                   <Text style={pricingStyles.tierName}>{t('pricing.premiumTitle')}</Text>
@@ -138,14 +119,10 @@ const PricingModal: React.FC<PricingModalProps> = ({ visible, onClose }) => {
                   </Text>
                 </View>
                 <TouchableOpacity
-                  style={[pricingStyles.buyButton, pricingStyles.buyButtonPremium, purchasing && pricingStyles.buyButtonDisabled]}
-                  onPress={handleBuy}
-                  disabled={purchasing}
+                  style={[pricingStyles.buyButton, pricingStyles.buyButtonPremium]}
+                  onPress={onCreatePremium}
                 >
-                  {purchasing
-                    ? <ActivityIndicator color="white" size="small" />
-                    : <Text style={pricingStyles.buyText}>{t('pricing.buy')}</Text>
-                  }
+                  <Text style={pricingStyles.buyText}>{t('pricing.createPremium')}</Text>
                 </TouchableOpacity>
               </View>
             </>
@@ -346,6 +323,10 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
           <PricingModal
             visible={pricingVisible}
             onClose={() => setPricingVisible(false)}
+            onCreatePremium={() => {
+              setPricingVisible(false);
+              navigation.navigate('CreateGame', { premium: true });
+            }}
           />
 
           <ScrollView
@@ -559,21 +540,6 @@ const pricingStyles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
   },
-  sandboxNote: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: '#f0ebff',
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 16,
-    gap: 6,
-  },
-  sandboxText: {
-    flex: 1,
-    fontSize: 12,
-    color: '#6b21a8',
-    lineHeight: 18,
-  },
   tier: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -610,9 +576,6 @@ const pricingStyles = StyleSheet.create({
   },
   buyButtonPremium: {
     backgroundColor: '#FF7F50',
-  },
-  buyButtonDisabled: {
-    opacity: 0.6,
   },
   buyText: {
     color: 'white',

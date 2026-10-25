@@ -31,7 +31,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 type CreateGameScreenProps = NativeStackScreenProps<RootStackParamList, 'CreateGame'>;
 
-const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
+const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }) => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [gameId, setGameId] = useState<string | undefined>();
@@ -58,7 +58,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
   const [packagePickerVisible, setPackagePickerVisible] = useState(false);
 
   // Game settings
-  const [isPremium, setIsPremium] = useState(false);
+  const [isPremium, setIsPremium] = useState(route.params?.premium ?? false);
   const [premiumPrice, setPremiumPrice] = useState('—');
   const [paywallVisible, setPaywallVisible] = useState(false);
 
