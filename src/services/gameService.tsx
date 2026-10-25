@@ -1,7 +1,7 @@
 // src/services/gameService.js
 import { supabase } from "../config/supabaseClient"
 import { getStatusColor } from "../utils/Colors"
-import { normalizeEmail } from "../features/game/partnerEmail"
+import { exactEmailPattern, normalizeEmail } from "../features/game/partnerEmail"
 import {
   GameData,
   GameQuestion,
@@ -260,8 +260,10 @@ export const getUserGames = async (): Promise<{ createdGames: GameItem[], partne
 
     if (createdError) throw createdError;
 
-    // Fetch games where user is the partner interviewed (by email)
-    const { data: partnerInterviewedGames, error: partnerInterviewedError } = await supabase
+    // Fetch games where user is the partner interviewed (by email). Match
+    // case-insensitively: older rows store the email as the creator typed it.
+    const emailPattern = exactEmailPattern(user.email)
+    const partnerQuery = supabase
       .from('games')
       .select(`
         id,
@@ -271,7 +273,9 @@ export const getUserGames = async (): Promise<{ createdGames: GameItem[], partne
         status,
         questions(count)
       `)
-      .eq('partner_interviewed_email', normalizeEmail(user.email))
+    const { data: partnerInterviewedGames, error: partnerInterviewedError } = await (emailPattern
+      ? partnerQuery.ilike('partner_interviewed_email', emailPattern)
+      : partnerQuery.eq('partner_interviewed_email', normalizeEmail(user.email)))
       .in('status', ['ready_to_play', 'playing', 'answered', 'completed'])
       .order('created_at', { ascending: false });
 
