@@ -1,4 +1,4 @@
-import React, { useState, useLayoutEffect, useEffect } from 'react';
+import React, { useState, useLayoutEffect, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -28,6 +28,9 @@ import { QuestionPackagePicker } from '../components/QuestionPackagePicker';
 import { QuestionPackage } from '../data/questionPackages';
 import { useTranslation } from 'react-i18next';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { track } from '../lib/analytics';
+import { gameCreatedProps, parseQuestionPackageId, questionCountBucket } from '../lib/analytics/buckets';
+import type { QuestionPackageId } from '../lib/analytics/events';
 
 type CreateGameScreenProps = NativeStackScreenProps<RootStackParamList, 'CreateGame'>;
 
@@ -56,6 +59,8 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
   ]);
 
   const [packagePickerVisible, setPackagePickerVisible] = useState(false);
+  const [selectedPackageId, setSelectedPackageId] = useState<QuestionPackageId | null>(null);
+  const gameCreatedTracked = useRef(false);
 
   // Game settings
   const [isPremium, setIsPremium] = useState(false);
@@ -155,14 +160,20 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
         {
           text: 'Add to List',
           style: 'default',
-          onPress: () => setQuestions(prev =>
-            [...prev, ...personalizedQuestions.map((q, i) => ({ ...q, order_num: prev.length + i + 1 }))]
-          ),
+          onPress: () => {
+            setSelectedPackageId(parseQuestionPackageId(pkg.id));
+            setQuestions(prev =>
+              [...prev, ...personalizedQuestions.map((q, i) => ({ ...q, order_num: prev.length + i + 1 }))]
+            );
+          },
         },
         {
           text: 'Replace All',
           style: 'destructive',
-          onPress: () => setQuestions(personalizedQuestions.map((q, i) => ({ ...q, order_num: i + 1 }))),
+          onPress: () => {
+            setSelectedPackageId(parseQuestionPackageId(pkg.id));
+            setQuestions(personalizedQuestions.map((q, i) => ({ ...q, order_num: i + 1 })));
+          },
         },
       ]
     );
@@ -275,6 +286,8 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
               return;
             }
           }
+          const bucket = questionCountBucket(questions.length);
+          if (bucket) track('questions_saved', { count_bucket: bucket });
         }
       }
 
@@ -314,11 +327,17 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
 
       if (error) throw error;
 
+      if (!gameCreatedTracked.current) {
+        gameCreatedTracked.current = true;
+        track('game_created', gameCreatedProps(selectedPackageId));
+      }
+
       if (game?.id) {
         const { success: inviteSuccess, error: inviteError } = await sendGameInvite(game.id, partnerInterviewedEmail);
         if (inviteError) {
           showToast(t('createGame.gameCreatedInviteError', { error: inviteError.message }), 'warning');
         } else if (inviteSuccess) {
+          track('invite_sent', { channel: 'email' });
           try {
             await Share.share({
               message: t('createGame.shareMessage'),
@@ -621,6 +640,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
       </SafeAreaView>
       <PaywallModal
         visible={paywallVisible}
+        source="create_game"
         onUpgradeSuccess={() => {
           setPaywallVisible(false);
           finalizeGame('premium');

@@ -11,6 +11,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import Purchases from 'react-native-purchases';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { AnalyticsInitializer } from './src/lib/analytics/AnalyticsInitializer';
 
 export default function App() {
   const [isAppReady, setIsAppReady] = useState(false);
@@ -39,18 +40,19 @@ export default function App() {
     setIsAppReady(true);
   }, []);
 
-  if (!isAppReady) {
-    return <SplashScreen onAnimationComplete={handleSplashComplete} />;
-  }
-
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ErrorBoundary>
-        <StatusBar backgroundColor="#8A2BE2" translucent={false} />
+        {isAppReady && <StatusBar backgroundColor="#8A2BE2" translucent={false} />}
         <SafeAreaProvider>
           <ToastProvider>
             <AuthProvider>
-              <AppNavigator />
+              <AnalyticsInitializer />
+              {isAppReady ? (
+                <AppNavigator />
+              ) : (
+                <SplashScreen onAnimationComplete={handleSplashComplete} />
+              )}
             </AuthProvider>
           </ToastProvider>
         </SafeAreaProvider>

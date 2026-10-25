@@ -177,6 +177,9 @@ export default {
     errorLoadingProfile: 'An error occurred while loading profile',
     failedDeleteAccount: 'Failed to delete account. Please try again.',
     unexpectedError: 'An unexpected error occurred. Please try again.',
+    privacy: 'Privacy',
+    shareUsageData: 'Share usage data',
+    shareUsageDataHelp: 'Helps improve Mr & Mrs. Never includes questions, answers, names, or emails.',
   },
   howToPlay: {
     bridesmaidsGroomsmen: 'Bridesmaid/Groomsman',

@@ -4,6 +4,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 import { supabase } from '../config/supabaseClient';
 import { useToast } from '../contexts/ToastContext';
+import { isFreshAuthUser, reportAuthError, trackAuthResult } from '../features/auth/trackAuth';
 
 const SignInWithApple: React.FC = () => {
   const { showToast } = useToast();
@@ -32,14 +33,16 @@ const SignInWithApple: React.FC = () => {
 
       if (!credential.identityToken) throw new Error('Apple did not return an identity token.');
 
-      const { error } = await supabase.auth.signInWithIdToken({
+      const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'apple',
         token: credential.identityToken,
         nonce: rawNonce,
       });
 
       if (error) throw error;
+      trackAuthResult(isFreshAuthUser(data.user?.created_at), 'apple');
     } catch (e: any) {
+      reportAuthError(e, 'apple');
       if (e.code !== 'ERR_REQUEST_CANCELED') {
         console.error('Apple sign-in error:', e);
         showToast('Sign in with Apple failed. Please try again.', 'error');

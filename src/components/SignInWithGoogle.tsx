@@ -3,6 +3,7 @@ import { TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { AntDesign } from '@expo/vector-icons';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { supabase } from '../config/supabaseClient';
+import { isFreshAuthUser, reportAuthError, trackAuthResult } from '../features/auth/trackAuth';
 
 const SignInWithGoogle: React.FC = () => {
   const handlePress = async () => {
@@ -12,12 +13,14 @@ const SignInWithGoogle: React.FC = () => {
       const idToken = userInfo.data?.idToken;
       if (!idToken) throw new Error('No ID token returned from Google');
 
-      const { error } = await supabase.auth.signInWithIdToken({
+      const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
         token: idToken,
       });
       if (error) throw error;
+      trackAuthResult(isFreshAuthUser(data.user?.created_at), 'google');
     } catch (e: any) {
+      reportAuthError(e, 'google');
       if (e.code === statusCodes.SIGN_IN_CANCELLED) return;
       console.error('Google sign-in error:', e);
     }

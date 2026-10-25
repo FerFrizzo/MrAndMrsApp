@@ -9,6 +9,7 @@ import { Purple, PurpleLight, Orange } from '../utils/Colors';
 import { Feather } from '@expo/vector-icons';
 import { GameQuestionWithAnswer } from '../types/GameData';
 import { useToast } from '../contexts/ToastContext';
+import { track } from '../lib/analytics';
 
 interface GameResultScreenProps extends NativeStackScreenProps<RootStackParamList, 'GameResult'> { }
 
@@ -37,6 +38,7 @@ export default function GameResultScreen({ route, navigation }: GameResultScreen
       const correct = (questionsWithAnswers as GameQuestionWithAnswer[]).filter(q => q.answer && q.answer.isCorrect === true).length;
       setCorrectCount(correct);
       setTotalCount(questionsWithAnswers.length);
+      track('results_revealed');
     } catch (e: any) {
       setError(e.message || 'Failed to load results');
     } finally {
@@ -61,6 +63,7 @@ export default function GameResultScreen({ route, navigation }: GameResultScreen
     try {
       const { error } = await completeGame(gameId);
       if (error) throw error;
+      track('game_completed');
       setCompleted(true);
       showToast('Thanks for playing Mr & Mrs game', 'success');
       navigation.reset({

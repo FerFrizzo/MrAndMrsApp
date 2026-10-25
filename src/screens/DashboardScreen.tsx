@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Menu, Provider, Button } from 'react-native-paper';
 import { getProductPrices, purchaseGame } from '../services/paymentService';
 import { useTranslation } from 'react-i18next';
+import { usePaywallTracking } from '../features/paywall/usePaywallTracking';
 
 type DashboardScreenProps = NativeStackScreenProps<RootStackParamList, 'Dashboard'>;
 
@@ -52,6 +53,8 @@ const PricingModal: React.FC<PricingModalProps> = ({ visible, onClose }) => {
   const [pricesLoading, setPricesLoading] = useState(false);
   const [purchasing, setPurchasing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const purchasedRef = useRef(false);
+  const tracking = usePaywallTracking('unknown', visible);
 
   const fetchPrices = async () => {
     setPricesLoading(true);
@@ -68,14 +71,22 @@ const PricingModal: React.FC<PricingModalProps> = ({ visible, onClose }) => {
 
   useEffect(() => {
     if (visible) {
+      purchasedRef.current = false;
       fetchPrices();
     }
   }, [visible]);
 
+  const handleClose = () => {
+    if (!purchasedRef.current) tracking.onDismissed();
+    onClose();
+  };
+
   const handleBuy = async () => {
     setPurchasing(true);
     try {
-      await purchaseGame();
+      const { productId } = await purchaseGame();
+      purchasedRef.current = true;
+      tracking.onPurchaseCompleted(productId);
     } catch (e: any) {
       if (!e?.message?.includes('cancelled') && !e?.message?.includes('cancel')) {
         setError(e?.message || t('pricing.purchaseFailed'));
@@ -88,12 +99,12 @@ const PricingModal: React.FC<PricingModalProps> = ({ visible, onClose }) => {
   const priceUnavailable = premiumPrice === '—';
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
       <View style={pricingStyles.overlay}>
         <View style={pricingStyles.sheet}>
           <View style={pricingStyles.header}>
             <Text style={pricingStyles.title}>{t('pricing.title')}</Text>
-            <TouchableOpacity onPress={onClose} style={pricingStyles.closeButton}>
+            <TouchableOpacity onPress={handleClose} style={pricingStyles.closeButton}>
               <MaterialCommunityIcons name="close" size={22} color="#555" />
             </TouchableOpacity>
           </View>

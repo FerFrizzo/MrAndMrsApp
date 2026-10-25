@@ -177,6 +177,9 @@ export default {
     errorLoadingProfile: 'Wystąpił błąd podczas ładowania profilu',
     failedDeleteAccount: 'Nie udało się usunąć konta. Spróbuj ponownie.',
     unexpectedError: 'Wystąpił nieoczekiwany błąd. Spróbuj ponownie.',
+    privacy: 'Prywatność',
+    shareUsageData: 'Udostępniaj dane o użytkowaniu',
+    shareUsageDataHelp: 'Pomaga ulepszać Mr & Mrs. Nigdy nie zawiera pytań, odpowiedzi, imion ani e-maili.',
   },
   howToPlay: {
     bridesmaidsGroomsmen: 'Druhna/Świadek',

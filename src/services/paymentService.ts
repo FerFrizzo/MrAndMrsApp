@@ -11,10 +11,11 @@ export async function getProductPrices(): Promise<{ premium: string }> {
   return { premium: premium?.priceString ?? '—' };
 }
 
-export async function purchaseGame(): Promise<void> {
+export async function purchaseGame(): Promise<{ productId: string }> {
   const products = await Purchases.getProducts([PREMIUM_PRODUCT_ID]);
   if (!products.length) {
     throw new Error('Product not available. Please try again later.');
   }
-  await Purchases.purchaseStoreProduct(products[0]);
+  const result = await Purchases.purchaseStoreProduct(products[0]);
+  return { productId: result.productIdentifier || products[0].identifier };
 }

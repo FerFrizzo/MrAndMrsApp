@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -23,6 +23,7 @@ import { useToast } from '../contexts/ToastContext';
 import { supabase } from '../config/supabaseClient';
 import { PaywallModal } from '../components/PaywallModal';
 import { useTranslation } from 'react-i18next';
+import { track } from '../lib/analytics';
 
 type GameDetailsScreenProps = NativeStackScreenProps<RootStackParamList, 'GameDetails' | 'GameQuestion'>;
 
@@ -48,6 +49,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [paywallVisible, setPaywallVisible] = useState(false);
+  const inviteOpenedTracked = useRef(false);
   useEffect(() => {
     fetchGameDetails();
   }, [gameId]);
@@ -67,6 +69,17 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
       setCurrentUserEmail(data?.user?.email ?? null);
     });
   }, []);
+
+  useEffect(() => {
+    if (inviteOpenedTracked.current || !game || !currentUserId || !currentUserEmail) return;
+    const isInvitedPartner =
+      game.creator_id !== currentUserId &&
+      game.partner_interviewed_email === currentUserEmail &&
+      game.status !== 'in_creation';
+    if (!isInvitedPartner) return;
+    inviteOpenedTracked.current = true;
+    track('invite_opened');
+  }, [game, currentUserId, currentUserEmail]);
 
   const fetchGameDetails = async () => {
     setLoading(true);
@@ -313,6 +326,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
               if (error) throw error;
 
               if (success) {
+                track('invite_sent', { channel: 'email' });
                 try {
                   await Share.share({
                     message: t('gameDetails.shareMessage'),
@@ -690,6 +704,7 @@ const GameDetailsScreen: React.FC<GameDetailsScreenProps> = ({ route, navigation
       {renderQuestionModal()}
       <PaywallModal
         visible={paywallVisible}
+        source="media_upload"
         onUpgradeSuccess={async () => {
           setPaywallVisible(false);
           try {
