@@ -3,7 +3,13 @@ jest.mock("../../lib/analytics", () => ({
   track: (...args: unknown[]) => mockTrack(...args),
 }));
 
-import { isFreshAuthUser, reportAuthError, trackAuthResult } from "./trackAuth";
+import {
+  isExistingEmailSignUp,
+  isFreshAuthUser,
+  reportAuthError,
+  trackAuthResult,
+  trackEmailSignUp,
+} from "./trackAuth";
 
 beforeEach(() => jest.clearAllMocks());
 
@@ -79,5 +85,46 @@ describe("reportAuthError", () => {
       throw new Error("posthog down");
     });
     expect(reportAuthError({ code: "auth/network-request-failed" }, "email")).toMatch(/connection/i);
+  });
+
+  it("classifies an unconfirmed email so the confirmation-email leak is visible", () => {
+    reportAuthError({ code: "email_not_confirmed", message: "Email not confirmed" }, "email");
+    expect(mockTrack).toHaveBeenLastCalledWith("sign_in_failed", {
+      method: "email",
+      reason: "email-not-confirmed",
+    });
+    reportAuthError({ message: "Email not confirmed" }, "email");
+    expect(mockTrack).toHaveBeenLastCalledWith("sign_in_failed", {
+      method: "email",
+      reason: "email-not-confirmed",
+    });
+  });
+});
+
+describe("isExistingEmailSignUp", () => {
+  // With email confirmation on, Supabase answers a sign-up for an existing
+  // email with a fake success: a user with no identities.
+  it("detects Supabase's obfuscated response for an existing email", () => {
+    expect(isExistingEmailSignUp({ user: { identities: [] } })).toBe(true);
+  });
+  it("treats a real new user as a sign-up", () => {
+    expect(isExistingEmailSignUp({ user: { identities: [{ id: "x" }] } })).toBe(false);
+    expect(isExistingEmailSignUp(null)).toBe(false);
+  });
+});
+
+describe("trackEmailSignUp", () => {
+  it("does not count an existing email as signed_up", () => {
+    trackEmailSignUp({ user: { identities: [] } });
+    expect(mockTrack).toHaveBeenCalledWith("sign_in_failed", {
+      method: "email",
+      reason: "email-in-use",
+    });
+    expect(mockTrack).not.toHaveBeenCalledWith("signed_up", expect.anything());
+  });
+
+  it("counts a real new user as signed_up", () => {
+    trackEmailSignUp({ user: { identities: [{ id: "x" }] } });
+    expect(mockTrack).toHaveBeenCalledWith("signed_up", { method: "email" });
   });
 });

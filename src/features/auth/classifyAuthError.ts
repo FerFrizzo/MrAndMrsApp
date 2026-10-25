@@ -13,6 +13,7 @@ const SAFE_MESSAGE: Record<AuthErrorKind, string> = {
   "invalid-email": "Enter a valid email address.",
   "weak-password": "Choose a stronger password.",
   "too-many-requests": "Too many attempts. Wait a few minutes and try again.",
+  "email-not-confirmed": "Confirm your email first. Check your inbox and spam folder.",
   "user-disabled": "This account has been disabled. Contact support for help.",
   "popup-closed": "Sign-in was cancelled.",
   network: "Couldn't reach the server. Check your connection and try again.",
@@ -70,6 +71,8 @@ function kindFromCode(code: string): AuthErrorKind | null {
     case "over_email_send_rate_limit":
     case "too_many_requests":
       return "too-many-requests";
+    case "email_not_confirmed":
+      return "email-not-confirmed";
     case "auth/user-disabled":
     case "user_banned":
     case "user_disabled":
@@ -99,6 +102,7 @@ function kindFromCode(code: string): AuthErrorKind | null {
 function kindFromMessage(message: string): AuthErrorKind | null {
   if (!message) return null;
   if (/cancel/i.test(message)) return "cancelled";
+  if (/email not confirmed/i.test(message)) return "email-not-confirmed";
   if (/network|failed to fetch|offline|internet/i.test(message)) return "network";
   if (/already registered|already exists|already been registered/i.test(message)) return "email-in-use";
   if (/invalid login|invalid credentials|wrong password/i.test(message)) return "wrong-credentials";

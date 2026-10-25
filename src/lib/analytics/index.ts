@@ -9,7 +9,9 @@ export type {
   AuthMethod,
   EventProps,
   GameRole,
+  InviteFrom,
   PaywallSource,
+  PurchaseErrorKind,
   QuestionCountBucket,
   QuestionPackageId,
 } from "./events";

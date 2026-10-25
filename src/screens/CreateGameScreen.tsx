@@ -31,6 +31,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { track } from '../lib/analytics';
 import { gameCreatedProps, parseQuestionPackageId, questionCountBucket } from '../lib/analytics/buckets';
 import type { QuestionPackageId } from '../lib/analytics/events';
+import { normalizeEmail } from '../features/game/partnerEmail';
 
 type CreateGameScreenProps = NativeStackScreenProps<RootStackParamList, 'CreateGame'>;
 
@@ -233,7 +234,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
 
         const { game, error } = await createOrUpdateGame({
           game_name: gameName.trim(),
-          partner_interviewed_email: partnerInterviewedEmail.trim(),
+          partner_interviewed_email: normalizeEmail(partnerInterviewedEmail),
           partner_interviewed_name: partnerInterviewedName.trim(),
           partner_playing_email: partnerPlayingEmail.trim() || undefined,
           partner_playing_name: partnerPlayingName.trim() || undefined,
@@ -313,13 +314,16 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
       showToast(t('createGame.saveError'), 'error');
       return;
     }
+    // Set once the game row says premium, so a later invite error is not
+    // mistaken for a failed grant.
+    let premiumGranted = false;
     try {
       setLoading(true);
       const { game, error } = await updateGameData({
         game_name: gameName.trim(),
-        partner_interviewed_email: partnerInterviewedEmail.trim(),
+        partner_interviewed_email: normalizeEmail(partnerInterviewedEmail),
         partner_interviewed_name: partnerInterviewedName.trim(),
-        partner_playing_email: partnerPlayingEmail.trim() || undefined,
+        partner_playing_email: normalizeEmail(partnerPlayingEmail) || undefined,
         partner_playing_name: partnerPlayingName.trim() || undefined,
         status: 'ready_to_play',
         is_paid: tier,
@@ -327,17 +331,23 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
 
       if (error) throw error;
 
+      if (tier === 'premium') {
+        premiumGranted = true;
+        track('premium_granted', { source: 'create_game' });
+      }
+
       if (!gameCreatedTracked.current) {
         gameCreatedTracked.current = true;
         track('game_created', gameCreatedProps(selectedPackageId));
       }
 
       if (game?.id) {
-        const { success: inviteSuccess, error: inviteError } = await sendGameInvite(game.id, partnerInterviewedEmail);
+        const { success: inviteSuccess, error: inviteError } = await sendGameInvite(game.id, normalizeEmail(partnerInterviewedEmail));
         if (inviteError) {
+          track('invite_failed', { from: 'create_game' });
           showToast(t('createGame.gameCreatedInviteError', { error: inviteError.message }), 'warning');
         } else if (inviteSuccess) {
-          track('invite_sent', { channel: 'email' });
+          track('invite_sent', { channel: 'email', from: 'create_game' });
           try {
             await Share.share({
               message: t('createGame.shareMessage'),
@@ -349,6 +359,10 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
       }
       navigation.navigate('Dashboard');
     } catch (error: any) {
+      // The user has already paid for this game; this is the money leak to watch.
+      if (tier === 'premium' && !premiumGranted) {
+        track('premium_grant_failed', { source: 'create_game' });
+      }
       showToast(error.message || t('createGame.paymentFailed'), 'error');
     } finally {
       setLoading(false);

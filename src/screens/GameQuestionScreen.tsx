@@ -281,6 +281,7 @@ function GameQuestionScreen({ route, navigation }: GameQuestionScreenProps) {
       track('game_answered', { has_media: hasMedia });
       navigation.replace('GameDetails', { gameId });
     } catch (err: any) {
+      track('answers_submit_failed');
       console.error('error submitting answers');
       setError(err.message || 'Failed to submit answers');
     } finally {

@@ -41,18 +41,22 @@ const weeklyBars = (event, ...breakdown) => ({
   ...(breakdown.length ? eventBreakdown(...breakdown) : {}),
 });
 
+const weeklyMulti = (events, ...breakdown) => ({
+  ...weeklyBars(events[0], ...breakdown),
+  series: events.map(ev),
+});
+
 const INSIGHTS = [
   {
-    name: "1. Main creator funnel: install → purchase",
+    name: "1. Main creator funnel: install → results",
     description:
-      "Where creators drop off. Application Installed only fires for fresh installs (captureAppLifecycleEvents).",
+      "Where creators drop off. Application Installed only fires for fresh installs (captureAppLifecycleEvents). Purchases happen at game creation, so they are measured in insights 3 and 8, not here.",
     source: funnel([
       "Application Installed",
       "signed_up",
       "game_created",
       "invite_sent",
       "results_revealed",
-      "purchase_completed",
     ]),
   },
   {
@@ -62,7 +66,7 @@ const INSIGHTS = [
   },
   {
     name: "3. Paywall conversion by source",
-    description: "paywall_viewed → purchase_completed, split by source.",
+    description: "paywall_viewed → purchase_completed, split by source. dashboard_pricing only shows the price, so expect no purchases there.",
     source: funnel(["paywall_viewed", "purchase_completed"], eventBreakdown("source")),
   },
   {
@@ -102,6 +106,27 @@ const INSIGHTS = [
     name: "7. Usage-data opt-outs",
     description: "Weekly analytics_opted_out. Should stay near zero.",
     source: weeklyBars("analytics_opted_out"),
+  },
+  {
+    name: "8. Money path: paid → premium granted",
+    description:
+      "purchase_completed → premium_granted by source. Any gap is a user who paid and did not get premium; check premium_grant_failed.",
+    source: funnel(["purchase_completed", "premium_granted"], {
+      ...eventBreakdown("source"),
+      funnelsFilter: { funnelWindowInterval: 1, funnelWindowIntervalUnit: "hour" },
+    }),
+  },
+  {
+    name: "9. Failures that block the journey",
+    description:
+      "Weekly invite_failed, answers_submit_failed, purchase_failed, premium_grant_failed and password_reset_failed. Purchase cancellations are separate (purchase_cancelled).",
+    source: weeklyMulti([
+      "invite_failed",
+      "answers_submit_failed",
+      "purchase_failed",
+      "premium_grant_failed",
+      "password_reset_failed",
+    ]),
   },
 ];
 

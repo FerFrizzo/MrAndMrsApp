@@ -4,6 +4,13 @@ PostHog on the EU cloud (`https://eu.i.posthog.com`). Session replay is off. Geo
 
 Analytics is disabled in Jest, in Expo Go, and in `__DEV__` unless `EXPO_PUBLIC_POSTHOG_ENABLE_DEV=1`. Every public call is a no-op until init finishes, when the key is missing, when the user has opted out, and when the SDK throws.
 
+## Events
+
+The catalogue is `events.ts`; `track()` only accepts what it declares. Besides the journey steps, two groups exist so a drop-off can be explained, not just seen:
+
+- **Failures**: `sign_in_failed` and `password_reset_failed` (classified `reason`, never the provider message), `invite_failed`, `answers_submit_failed`, `purchase_failed` (classified store `reason`). Cancellations are `purchase_cancelled`, not failures.
+- **Money path**: `purchase_completed` fires when the store charges; `premium_granted` / `premium_grant_failed` fire when the app writes `is_paid` on the game. A `purchase_completed` without a `premium_granted` is a user who paid and did not get premium (dashboard insight 8).
+
 ## Keys
 
 Copy the repo `.env.example` to `.env` for local Expo. `EXPO_PUBLIC_POSTHOG_KEY` is the public project key (it is bundled into the app). Do not put a PostHog personal API key in any `EXPO_PUBLIC_*` variable, and do not commit a filled-in `.env`.

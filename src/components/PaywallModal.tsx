@@ -53,9 +53,9 @@ export const PaywallModal: React.FC<PaywallModalProps> = ({
       tracking.onPurchaseCompleted(productId);
       onUpgradeSuccess();
     } catch (e: any) {
-      if (!e?.message?.toLowerCase().includes('cancel')) {
-        // Non-cancellation error — StoreKit already surfaces its own UI
-      }
+      // Cancellations and failures are tracked separately. Non-cancellation
+      // errors need no UI here — StoreKit already surfaces its own.
+      tracking.onPurchaseFailed(e);
     } finally {
       setPurchasing(false);
     }

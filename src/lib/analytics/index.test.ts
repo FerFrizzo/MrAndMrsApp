@@ -122,8 +122,8 @@ describe("initAnalytics", () => {
 describe("track", () => {
   it("forwards the event and props", async () => {
     await initAnalytics(enabled);
-    track("invite_sent", { channel: "email" });
-    expect(mockCapture).toHaveBeenCalledWith("invite_sent", { channel: "email" });
+    track("invite_sent", { channel: "email", from: "create_game" });
+    expect(mockCapture).toHaveBeenCalledWith("invite_sent", { channel: "email", from: "create_game" });
   });
 
   it("sends an empty props object for prop-less events", async () => {

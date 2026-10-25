@@ -1,6 +1,7 @@
 // src/services/gameService.js
 import { supabase } from "../config/supabaseClient"
 import { getStatusColor } from "../utils/Colors"
+import { normalizeEmail } from "../features/game/partnerEmail"
 import {
   GameData,
   GameQuestion,
@@ -270,7 +271,7 @@ export const getUserGames = async (): Promise<{ createdGames: GameItem[], partne
         status,
         questions(count)
       `)
-      .eq('partner_interviewed_email', user.email)
+      .eq('partner_interviewed_email', normalizeEmail(user.email))
       .in('status', ['ready_to_play', 'playing', 'answered', 'completed'])
       .order('created_at', { ascending: false });
 

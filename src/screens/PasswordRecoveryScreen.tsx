@@ -20,6 +20,8 @@ import { Purple, PurpleLight } from '../utils/Colors';
 import { AntDesign } from '@expo/vector-icons';
 import { resetPassword } from '../services/authService';
 import { useTranslation } from 'react-i18next';
+import { track } from '../lib/analytics';
+import { classifyAuthError } from '../features/auth/classifyAuthError';
 
 type PasswordRecoveryScreenProps = NativeStackScreenProps<RootStackParamList, 'PasswordRecovery'>;
 
@@ -44,6 +46,7 @@ const PasswordRecoveryScreen: React.FC<PasswordRecoveryScreenProps> = ({ navigat
         throw error;
       }
 
+      track('password_reset_requested');
       setEmailSent(true);
     } catch (error: any) {
       console.error("Password reset error:", error);
@@ -53,9 +56,12 @@ const PasswordRecoveryScreen: React.FC<PasswordRecoveryScreenProps> = ({ navigat
       // Don't reveal if the email exists or not for security reasons
       if (error.message && error.message.includes('user not found')) {
         // Pretend it worked for security
+        track('password_reset_requested');
         setEmailSent(true);
         return;
-      } else if (error.message) {
+      }
+      track('password_reset_failed', { reason: classifyAuthError(error).kind });
+      if (error.message) {
         errorMessage = error.message;
       }
 
@@ -85,7 +91,7 @@ const PasswordRecoveryScreen: React.FC<PasswordRecoveryScreenProps> = ({ navigat
             style={styles.backButton}
             onPress={handleBackToLogin}
           >
-            <AntDesign name="arrowleft" size={24} color="white" />
+            <AntDesign name="arrow-left" size={24} color="white" />
           </TouchableOpacity>
 
           <View style={styles.contentContainer}>
