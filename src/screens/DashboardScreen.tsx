@@ -48,7 +48,7 @@ interface PricingModalProps {
   onCreatePremium: () => void;
 }
 
-const PricingModal: React.FC<PricingModalProps> = ({ visible, onClose, onCreatePremium }) => {
+export const PricingModal: React.FC<PricingModalProps> = ({ visible, onClose, onCreatePremium }) => {
   const { t } = useTranslation();
   const [premiumPrice, setPremiumPrice] = useState<string | null>(null);
   const [pricesLoading, setPricesLoading] = useState(false);
