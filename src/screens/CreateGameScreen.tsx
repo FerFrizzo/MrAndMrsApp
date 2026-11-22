@@ -35,7 +35,7 @@ import { normalizeEmail } from '../features/game/partnerEmail';
 
 type CreateGameScreenProps = NativeStackScreenProps<RootStackParamList, 'CreateGame'>;
 
-const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }) => {
+const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [gameId, setGameId] = useState<string | undefined>();
@@ -64,7 +64,6 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
   const gameCreatedTracked = useRef(false);
 
   // Game settings
-  const [isPremium, setIsPremium] = useState(route.params?.premium ?? false);
   const [premiumPrice, setPremiumPrice] = useState('—');
   const [paywallVisible, setPaywallVisible] = useState(false);
 
@@ -378,11 +377,8 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
       showToast(t('createGame.saveError'), 'error');
       return;
     }
-    if (isPremium) {
-      setPaywallVisible(true);
-    } else {
-      finalizeGame('no');
-    }
+    // Every creator sees the Premium offer; "Continue with free game" stays.
+    setPaywallVisible(true);
   };
 
   // Render different steps
@@ -555,22 +551,6 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
           <View style={styles.stepContainer}>
             <Text style={styles.stepTitle}>{t('createGame.gameSettings')}</Text>
 
-            <View style={styles.optionContainer}>
-              <Text style={styles.optionLabel}>{t('createGame.premiumGame')}</Text>
-              <TouchableOpacity
-                style={[
-                  styles.toggle,
-                  isPremium ? styles.toggleActive : {}
-                ]}
-                onPress={() => setIsPremium(!isPremium)}
-              >
-                <View style={[
-                  styles.toggleHandle,
-                  isPremium ? styles.toggleHandleActive : {}
-                ]} />
-              </TouchableOpacity>
-            </View>
-
             <Text style={styles.premiumNote}>
               {t('createGame.premiumNote', { price: premiumPrice })}
             </Text>
@@ -581,10 +561,6 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
               <Text style={styles.summaryItem}>{`${t('createGame.partnerInterviewed')}: ${partnerInterviewedEmail}`}</Text>
               <Text style={styles.summaryItem}>{`${t('createGame.partnerPlaying')}: ${partnerPlayingEmail}`}</Text>
               <Text style={styles.summaryItem}>{`${t('createGame.questionsCount')}: ${questions.length}`}</Text>
-              <Text style={styles.summaryItem}>{`${t('createGame.type')}: ${isPremium ? t('createGame.premium') : t('createGame.standard')}`}</Text>
-              {isPremium && (
-                <Text style={styles.summaryItem}>{`${t('createGame.price')}: ${premiumPrice}`}</Text>
-              )}
             </View>
 
           </View>
@@ -661,9 +637,9 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
         }}
         onContinueFree={() => {
           setPaywallVisible(false);
-          setIsPremium(false);
           finalizeGame('no');
         }}
+        onClose={() => setPaywallVisible(false)}
       />
       <QuestionPackagePicker
         visible={packagePickerVisible}
@@ -836,16 +812,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
   },
-  optionContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  optionLabel: {
-    color: 'white',
-    fontSize: 16,
-  },
   smallInput: {
     backgroundColor: 'white',
     borderRadius: 8,
@@ -854,29 +820,9 @@ const styles = StyleSheet.create({
     width: 100,
     textAlign: 'center',
   },
-  toggle: {
-    width: 50,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    padding: 2,
-  },
-  toggleActive: {
-    backgroundColor: Purple,
-  },
-  toggleHandle: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: 'white',
-  },
-  toggleHandleActive: {
-    transform: [{ translateX: 20 }],
-  },
   premiumNote: {
     color: 'rgba(255, 255, 255, 0.7)',
     fontSize: 12,
-    marginTop: -10,
     marginBottom: 20,
     marginLeft: 5,
   },
