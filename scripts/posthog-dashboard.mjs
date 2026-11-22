@@ -41,6 +41,13 @@ const weeklyBars = (event, ...breakdown) => ({
   ...(breakdown.length ? eventBreakdown(...breakdown) : {}),
 });
 
+// One funnel step = an event filtered to a single property value.
+const evWhere = (event, key, value) => ({
+  ...ev(event),
+  custom_name: `${event} (${value})`,
+  properties: [{ key, value, operator: "exact", type: "event" }],
+});
+
 const weeklyMulti = (events, ...breakdown) => ({
   ...weeklyBars(events[0], ...breakdown),
   series: events.map(ev),
@@ -127,6 +134,28 @@ const INSIGHTS = [
       "premium_grant_failed",
       "password_reset_failed",
     ]),
+  },
+  {
+    name: "10. Create-game step funnel",
+    description:
+      "Which CreateGame step loses creators: details → questions → settings → paywall (now shown to everyone) → game_created. Pair with insight 11 for the reason.",
+    source: {
+      ...funnel([]),
+      series: [
+        evWhere("create_game_step_viewed", "step", "details"),
+        evWhere("create_game_step_viewed", "step", "questions"),
+        evWhere("create_game_step_viewed", "step", "settings"),
+        evWhere("paywall_viewed", "source", "create_game"),
+        ev("game_created"),
+      ],
+      funnelsFilter: { funnelWindowInterval: 1, funnelWindowIntervalUnit: "day" },
+    },
+  },
+  {
+    name: "11. Create-game blocked by step and reason",
+    description:
+      "Why Next/Create was refused (reason mapped from the error toast, never the typed text). create_game_abandoned shows where people left.",
+    source: weeklyBars("create_game_step_blocked", "step", "reason"),
   },
 ];
 

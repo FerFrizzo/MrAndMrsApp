@@ -9,6 +9,7 @@ Analytics is disabled in Jest, in Expo Go, and in `__DEV__` unless `EXPO_PUBLIC_
 The catalogue is `events.ts`; `track()` only accepts what it declares. Besides the journey steps, two groups exist so a drop-off can be explained, not just seen:
 
 - **Failures**: `sign_in_failed` and `password_reset_failed` (classified `reason`, never the provider message), `invite_failed`, `answers_submit_failed`, `purchase_failed` (classified store `reason`). Cancellations are `purchase_cancelled`, not failures.
+- **Create-game steps**: `create_game_step_viewed {step}` (details / questions / settings), `create_game_step_blocked {step, reason}` when Next or Create is refused (reason mapped from the error toast key in `features/game/createGameTracking.ts`, never the typed text), and `create_game_abandoned {step}` when the screen closes without the game being finalised (dashboard insights 10 and 11).
 - **Money path**: `purchase_completed` fires when the store charges; `premium_granted` / `premium_grant_failed` fire when the app writes `is_paid` on the game. A `purchase_completed` without a `premium_granted` is a user who paid and did not get premium (dashboard insight 8).
 
 ## Keys
@@ -47,3 +48,14 @@ POSTHOG_PERSONAL_API_KEY=phx_... POSTHOG_PROJECT_ID=12345 node scripts/posthog-d
 ## Opt-out
 
 Account → Share usage data. The choice is stored on device (`mrandmrs.analytics.optOut`). Turning it off sends `analytics_opted_out`, flushes, then calls the SDK opt-out. `reset()` on sign-out restores that choice because PostHog's reset clears its own flag.
+
+## RevenueCat → PostHog (owner action)
+
+The app logs RevenueCat in with the Supabase user id (`setPurchasesUser` in `services/paymentService.ts`), which is also PostHog's distinct id. To get purchases, renewals, refunds and revenue into PostHog on the same person, enable RevenueCat's PostHog integration once.
+
+**Decide first: the in-app opt-out does not cover it.** RevenueCat sends these events from its servers, keyed by the user id, so a user who turned off Account → Share usage data would still get purchase/refund events on their PostHog person. Resolve that (e.g. a PostHog transformation that drops RevenueCat events for opted-out persons, or update the opt-out copy) before switching it on.
+
+
+1. RevenueCat dashboard → Mr and Mrs project → Integrations → PostHog.
+2. Host: `https://eu.i.posthog.com`. API key: the PostHog project key (`phc_…`, the same public key the app uses). Do not use a personal key.
+3. Save. RevenueCat sends its events with `distinct_id` = app user id, so they join the in-app events for signed-in users. Earlier anonymous purchases are linked the first time the new build calls `logIn` for that user (at launch if they are already signed in), subject to the project's transfer behaviour (it showed "Transfer to new App User ID" on 2026-11-22). If `logIn` fails (e.g. offline), it is retried on the next launch or sign-in.

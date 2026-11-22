@@ -27,11 +27,14 @@ const EVENT_NAMES = [
   "premium_granted",
   "premium_grant_failed",
   "analytics_opted_out",
+  "create_game_step_viewed",
+  "create_game_step_blocked",
+  "create_game_abandoned",
 ] as const satisfies readonly AnalyticsEventName[];
 
 describe("event catalogue", () => {
   it("lists the stable Mr & Mrs event names", () => {
-    expect(EVENT_NAMES).toHaveLength(24);
+    expect(EVENT_NAMES).toHaveLength(27);
     expect(EVENT_NAMES).toContain("game_answered");
     expect(EVENT_NAMES).not.toContain("purchase_restored");
   });

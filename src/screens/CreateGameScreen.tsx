@@ -29,13 +29,14 @@ import { QuestionPackage } from '../data/questionPackages';
 import { useTranslation } from 'react-i18next';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { track } from '../lib/analytics';
+import { blockReasonForToastKey, stepName } from '../features/game/createGameTracking';
 import { gameCreatedProps, parseQuestionPackageId, questionCountBucket } from '../lib/analytics/buckets';
 import type { QuestionPackageId } from '../lib/analytics/events';
 import { normalizeEmail } from '../features/game/partnerEmail';
 
 type CreateGameScreenProps = NativeStackScreenProps<RootStackParamList, 'CreateGame'>;
 
-const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }) => {
+const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [gameId, setGameId] = useState<string | undefined>();
@@ -62,9 +63,11 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
   const [packagePickerVisible, setPackagePickerVisible] = useState(false);
   const [selectedPackageId, setSelectedPackageId] = useState<QuestionPackageId | null>(null);
   const gameCreatedTracked = useRef(false);
+  // Step funnel: where creators are when they view, get blocked, or leave.
+  const stepRef = useRef(step);
+  const finalized = useRef(false);
 
   // Game settings
-  const [isPremium, setIsPremium] = useState(route.params?.premium ?? false);
   const [premiumPrice, setPremiumPrice] = useState('—');
   const [paywallVisible, setPaywallVisible] = useState(false);
 
@@ -180,26 +183,46 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
     );
   };
 
+  useEffect(() => {
+    stepRef.current = step;
+    const name = stepName(step);
+    if (name) track('create_game_step_viewed', { step: name });
+  }, [step]);
+
+  useEffect(() => () => {
+    const name = stepName(stepRef.current);
+    if (!finalized.current && name) track('create_game_abandoned', { step: name });
+  }, []);
+
+  // Shows the error toast and records why Next/Create was refused. Only the
+  // toast key's mapped reason is sent, never what the user typed.
+  const blocked = (key: string, params?: Record<string, string>) => {
+    showToast(t(key, params), 'error');
+    const name = stepName(step);
+    const reason = blockReasonForToastKey(key);
+    if (name && reason) track('create_game_step_blocked', { step: name, reason });
+  };
+
   const validateStep = (currentStep: number): boolean => {
     if (currentStep === 1) {
       if (!gameName || !partnerInterviewedEmail || !partnerInterviewedName) {
-        showToast(t('createGame.fillAllFields'), 'error');
+        blocked('createGame.fillAllFields');
         return false;
       }
       // Email validation: at least 3 letters, contains @ and .
       const emailRegex = /^[^@\s]{3,}[^\s]*@[^\s]+\.[^\s]+$/;
       if (!emailRegex.test(partnerInterviewedEmail)) {
-        showToast(t('createGame.invalidEmail'), 'error');
+        blocked('createGame.invalidEmail');
         return false;
       }
       if (partnerPlayingEmail && !emailRegex.test(partnerPlayingEmail)) {
-        showToast(t('createGame.invalidPartnerEmail'), 'error');
+        blocked('createGame.invalidPartnerEmail');
         return false;
       }
     } else if (currentStep === 2) {
       const emptyQuestions = questions.some(q => !q.question_text);
       if (emptyQuestions) {
-        showToast(t('createGame.fillAllQuestions'), 'error');
+        blocked('createGame.fillAllQuestions');
         return false;
       }
 
@@ -210,7 +233,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
       );
 
       if (invalidMultipleChoice) {
-        showToast(t('createGame.multipleChoiceMin'), 'error');
+        blocked('createGame.multipleChoiceMin');
         return false;
       }
     }
@@ -228,7 +251,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
       if (step === 1) {
         // Create/Update game with initial details
         if (!gameName.trim() || !partnerInterviewedEmail.trim() || !partnerInterviewedName.trim()) {
-          showToast(t('createGame.fillAllFields'), 'error');
+          blocked('createGame.fillAllFields');
           return;
         }
 
@@ -243,7 +266,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
         }, gameId);
 
         if (error) {
-          showToast(t('createGame.failedSaveDetails'), 'error');
+          blocked('createGame.failedSaveDetails');
           return;
         }
 
@@ -254,7 +277,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
         // Validate all questions have text
         const hasEmptyQuestions = questions.some(q => !q.question_text.trim());
         if (hasEmptyQuestions) {
-          showToast(t('createGame.fillAllQuestions'), 'error');
+          blocked('createGame.fillAllQuestions');
           return;
         }
         // Validate multiple choice questions have at least 2 options
@@ -262,14 +285,14 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
           q => q.question_type === 'multiple_choice' && (!q.multiple_choice_options || q.multiple_choice_options.length < 2)
         );
         if (hasInvalidMultipleChoice) {
-          showToast(t('createGame.multipleChoiceMin'), 'error');
+          blocked('createGame.multipleChoiceMin');
           return;
         }
         // Delete old questions and create new ones
         if (gameId) {
           const { game, error: fetchError } = await getGameWithQuestions(gameId);
           if (fetchError) {
-            showToast(t('createGame.saveError'), 'error');
+            blocked('createGame.saveError');
             return;
           }
           const oldQuestionIds = (game?.questions || []).map((q: any) => q.id).filter(Boolean);
@@ -283,7 +306,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
               order_num: index + 1,
             });
             if (error || !success) {
-              showToast(t('createGame.failedSaveQuestion', { text: q.question_text || '' }), 'error');
+              blocked('createGame.failedSaveQuestion', { text: q.question_text || '' });
               return;
             }
           }
@@ -295,7 +318,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
       setStep(step + 1);
     } catch (error) {
       console.error('Error saving game:', error);
-      showToast(t('createGame.saveError'), 'error');
+      blocked('createGame.saveError');
     } finally {
       setLoading(false);
     }
@@ -311,7 +334,7 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
 
   const finalizeGame = async (tier: 'no' | 'premium') => {
     if (!gameId) {
-      showToast(t('createGame.saveError'), 'error');
+      blocked('createGame.saveError');
       return;
     }
     // Set once the game row says premium, so a later invite error is not
@@ -340,6 +363,8 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
         gameCreatedTracked.current = true;
         track('game_created', gameCreatedProps(selectedPackageId));
       }
+      // The game row is ready_to_play: leaving from here on is not abandoning.
+      finalized.current = true;
 
       if (game?.id) {
         const { success: inviteSuccess, error: inviteError } = await sendGameInvite(game.id, normalizeEmail(partnerInterviewedEmail));
@@ -363,6 +388,10 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
       if (tier === 'premium' && !premiumGranted) {
         track('premium_grant_failed', { source: 'create_game' });
       }
+      // Saving the finished game failed (an invite error after it saved is not a block).
+      if (!finalized.current) {
+        track('create_game_step_blocked', { step: 'settings', reason: 'save_failed' });
+      }
       showToast(error.message || t('createGame.paymentFailed'), 'error');
     } finally {
       setLoading(false);
@@ -371,18 +400,15 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
 
   const handleCreateGame = () => {
     if (questions.length === 0) {
-      showToast(t('createGame.atLeastOneQuestion'), 'error');
+      blocked('createGame.atLeastOneQuestion');
       return;
     }
     if (!gameId) {
-      showToast(t('createGame.saveError'), 'error');
+      blocked('createGame.saveError');
       return;
     }
-    if (isPremium) {
-      setPaywallVisible(true);
-    } else {
-      finalizeGame('no');
-    }
+    // Every creator sees the Premium offer; "Continue with free game" stays.
+    setPaywallVisible(true);
   };
 
   // Render different steps
@@ -555,22 +581,6 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
           <View style={styles.stepContainer}>
             <Text style={styles.stepTitle}>{t('createGame.gameSettings')}</Text>
 
-            <View style={styles.optionContainer}>
-              <Text style={styles.optionLabel}>{t('createGame.premiumGame')}</Text>
-              <TouchableOpacity
-                style={[
-                  styles.toggle,
-                  isPremium ? styles.toggleActive : {}
-                ]}
-                onPress={() => setIsPremium(!isPremium)}
-              >
-                <View style={[
-                  styles.toggleHandle,
-                  isPremium ? styles.toggleHandleActive : {}
-                ]} />
-              </TouchableOpacity>
-            </View>
-
             <Text style={styles.premiumNote}>
               {t('createGame.premiumNote', { price: premiumPrice })}
             </Text>
@@ -581,10 +591,6 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
               <Text style={styles.summaryItem}>{`${t('createGame.partnerInterviewed')}: ${partnerInterviewedEmail}`}</Text>
               <Text style={styles.summaryItem}>{`${t('createGame.partnerPlaying')}: ${partnerPlayingEmail}`}</Text>
               <Text style={styles.summaryItem}>{`${t('createGame.questionsCount')}: ${questions.length}`}</Text>
-              <Text style={styles.summaryItem}>{`${t('createGame.type')}: ${isPremium ? t('createGame.premium') : t('createGame.standard')}`}</Text>
-              {isPremium && (
-                <Text style={styles.summaryItem}>{`${t('createGame.price')}: ${premiumPrice}`}</Text>
-              )}
             </View>
 
           </View>
@@ -661,9 +667,9 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation, route }
         }}
         onContinueFree={() => {
           setPaywallVisible(false);
-          setIsPremium(false);
           finalizeGame('no');
         }}
+        onClose={() => setPaywallVisible(false)}
       />
       <QuestionPackagePicker
         visible={packagePickerVisible}
@@ -836,16 +842,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
   },
-  optionContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  optionLabel: {
-    color: 'white',
-    fontSize: 16,
-  },
   smallInput: {
     backgroundColor: 'white',
     borderRadius: 8,
@@ -854,29 +850,9 @@ const styles = StyleSheet.create({
     width: 100,
     textAlign: 'center',
   },
-  toggle: {
-    width: 50,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    padding: 2,
-  },
-  toggleActive: {
-    backgroundColor: Purple,
-  },
-  toggleHandle: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: 'white',
-  },
-  toggleHandleActive: {
-    transform: [{ translateX: 20 }],
-  },
   premiumNote: {
     color: 'rgba(255, 255, 255, 0.7)',
     fontSize: 12,
-    marginTop: -10,
     marginBottom: 20,
     marginLeft: 5,
   },

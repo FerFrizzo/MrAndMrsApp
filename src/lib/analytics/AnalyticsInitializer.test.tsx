@@ -12,6 +12,11 @@ jest.mock("./index", () => ({
   track: (...args: unknown[]) => mockTrack(...args),
 }));
 
+const mockSetPurchasesUser = jest.fn(async (_uid: string | null) => {});
+jest.mock("../../services/paymentService", () => ({
+  setPurchasesUser: (uid: string | null) => mockSetPurchasesUser(uid),
+}));
+
 let mockAuth: { isLoading: boolean; user: { id: string } | null } = {
   isLoading: true,
   user: null,
@@ -52,6 +57,17 @@ describe("AnalyticsInitializer", () => {
     mockAuth = { isLoading: false, user: null };
     rerender(<AnalyticsInitializer />);
     expect(mockReset).toHaveBeenCalledTimes(1);
+  });
+
+  // RevenueCat must follow the same user as PostHog so purchases are linked.
+  it("links RevenueCat to the signed-in user and unlinks on sign-out", () => {
+    mockAuth = { isLoading: false, user: { id: "uid-1" } };
+    const { rerender } = render(<AnalyticsInitializer />);
+    expect(mockSetPurchasesUser).toHaveBeenLastCalledWith("uid-1");
+
+    mockAuth = { isLoading: false, user: null };
+    rerender(<AnalyticsInitializer />);
+    expect(mockSetPurchasesUser).toHaveBeenLastCalledWith(null);
   });
 
   it("tracks screen views as route templates, once per change", () => {

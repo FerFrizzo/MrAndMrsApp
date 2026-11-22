@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Modal,
   View,
@@ -19,6 +19,8 @@ interface PaywallModalProps {
   source?: PaywallSource | string;
   onUpgradeSuccess: () => void;
   onContinueFree: () => void;
+  // Back/dismiss. Without it, dismissing continues free (GameDetails relies on that).
+  onClose?: () => void;
 }
 
 const PREMIUM_FEATURES = [
@@ -32,14 +34,19 @@ export const PaywallModal: React.FC<PaywallModalProps> = ({
   source = 'unknown',
   onUpgradeSuccess,
   onContinueFree,
+  onClose,
 }) => {
   const [price, setPrice] = useState('—');
   const [purchasing, setPurchasing] = useState(false);
   const paywallSource = parsePaywallSource(source);
   const tracking = usePaywallTracking(paywallSource, visible);
+  // The sheet stays tappable while it animates out; a second tap on the free
+  // button would create the game and email the partner twice.
+  const continuedFree = useRef(false);
 
   useEffect(() => {
     if (visible) {
+      continuedFree.current = false;
       getProductPrices()
         .then(p => setPrice(p.premium))
         .catch(() => {});
@@ -68,7 +75,7 @@ export const PaywallModal: React.FC<PaywallModalProps> = ({
       transparent
       onRequestClose={() => {
         tracking.onDismissed();
-        onContinueFree();
+        (onClose ?? onContinueFree)();
       }}
     >
       <View style={styles.overlay}>
@@ -107,6 +114,8 @@ export const PaywallModal: React.FC<PaywallModalProps> = ({
           <TouchableOpacity
             style={styles.freeButton}
             onPress={() => {
+              if (continuedFree.current) return;
+              continuedFree.current = true;
               tracking.onDismissed();
               onContinueFree();
             }}

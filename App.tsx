@@ -9,7 +9,7 @@ import AppNavigator from './src/navigation/AppNavigator';
 import { ToastProvider } from './src/contexts/ToastContext';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
-import Purchases from 'react-native-purchases';
+import { configurePurchases } from './src/services/paymentService';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { AnalyticsInitializer } from './src/lib/analytics/AnalyticsInitializer';
 
@@ -21,13 +21,7 @@ export default function App() {
       ? process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY
       : process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY;
 
-    if (apiKey) {
-      try {
-        Purchases.configure({ apiKey });
-      } catch (e) {
-        console.warn('RevenueCat configure failed:', e);
-      }
-    }
+    if (apiKey) configurePurchases(apiKey);
 
     const iosClientId = process.env.EXPO_PUBLIC_FIREBASE_IOS_ID;
     const webClientId = process.env.EXPO_PUBLIC_FIREBASE_WEB_ID;
