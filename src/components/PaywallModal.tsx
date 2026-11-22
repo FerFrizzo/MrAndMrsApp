@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Modal,
   View,
@@ -40,9 +40,13 @@ export const PaywallModal: React.FC<PaywallModalProps> = ({
   const [purchasing, setPurchasing] = useState(false);
   const paywallSource = parsePaywallSource(source);
   const tracking = usePaywallTracking(paywallSource, visible);
+  // The sheet stays tappable while it animates out; a second tap on the free
+  // button would create the game and email the partner twice.
+  const continuedFree = useRef(false);
 
   useEffect(() => {
     if (visible) {
+      continuedFree.current = false;
       getProductPrices()
         .then(p => setPrice(p.premium))
         .catch(() => {});
@@ -110,6 +114,8 @@ export const PaywallModal: React.FC<PaywallModalProps> = ({
           <TouchableOpacity
             style={styles.freeButton}
             onPress={() => {
+              if (continuedFree.current) return;
+              continuedFree.current = true;
               tracking.onDismissed();
               onContinueFree();
             }}
