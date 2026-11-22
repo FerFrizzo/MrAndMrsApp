@@ -51,8 +51,11 @@ Account → Share usage data. The choice is stored on device (`mrandmrs.analytic
 
 ## RevenueCat → PostHog (owner action)
 
-The app logs RevenueCat in with the Supabase user id (`setPurchasesUser` in `services/paymentService.ts`), which is also PostHog's distinct id. To get purchases, renewals, refunds and revenue into PostHog on the same person, enable RevenueCat's PostHog integration once:
+The app logs RevenueCat in with the Supabase user id (`setPurchasesUser` in `services/paymentService.ts`), which is also PostHog's distinct id. To get purchases, renewals, refunds and revenue into PostHog on the same person, enable RevenueCat's PostHog integration once.
+
+**Decide first: the in-app opt-out does not cover it.** RevenueCat sends these events from its servers, keyed by the user id, so a user who turned off Account → Share usage data would still get purchase/refund events on their PostHog person. Resolve that (e.g. a PostHog transformation that drops RevenueCat events for opted-out persons, or update the opt-out copy) before switching it on.
+
 
 1. RevenueCat dashboard → Mr and Mrs project → Integrations → PostHog.
 2. Host: `https://eu.i.posthog.com`. API key: the PostHog project key (`phc_…`, the same public key the app uses). Do not use a personal key.
-3. Save. RevenueCat sends its events with `distinct_id` = app user id, so they join the in-app events for signed-in users. Purchases made before this change stay on anonymous RevenueCat ids until that customer signs in again (transfer behaviour is "Transfer to new App User ID").
+3. Save. RevenueCat sends its events with `distinct_id` = app user id, so they join the in-app events for signed-in users. Earlier anonymous purchases are linked the first time the new build calls `logIn` for that user (at launch if they are already signed in), subject to the project's transfer behaviour (it showed "Transfer to new App User ID" on 2026-11-22). If `logIn` fails (e.g. offline), it is retried on the next launch or sign-in.

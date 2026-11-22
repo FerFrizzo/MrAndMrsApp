@@ -363,6 +363,8 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
         gameCreatedTracked.current = true;
         track('game_created', gameCreatedProps(selectedPackageId));
       }
+      // The game row is ready_to_play: leaving from here on is not abandoning.
+      finalized.current = true;
 
       if (game?.id) {
         const { success: inviteSuccess, error: inviteError } = await sendGameInvite(game.id, normalizeEmail(partnerInterviewedEmail));
@@ -380,12 +382,15 @@ const CreateGameScreen: React.FC<CreateGameScreenProps> = ({ navigation }) => {
           showToast(t('createGame.gameSaved'), 'success');
         }
       }
-      finalized.current = true;
       navigation.navigate('Dashboard');
     } catch (error: any) {
       // The user has already paid for this game; this is the money leak to watch.
       if (tier === 'premium' && !premiumGranted) {
         track('premium_grant_failed', { source: 'create_game' });
+      }
+      // Saving the finished game failed (an invite error after it saved is not a block).
+      if (!finalized.current) {
+        track('create_game_step_blocked', { step: 'settings', reason: 'save_failed' });
       }
       showToast(error.message || t('createGame.paymentFailed'), 'error');
     } finally {

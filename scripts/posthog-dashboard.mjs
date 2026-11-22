@@ -145,7 +145,7 @@ const INSIGHTS = [
         evWhere("create_game_step_viewed", "step", "details"),
         evWhere("create_game_step_viewed", "step", "questions"),
         evWhere("create_game_step_viewed", "step", "settings"),
-        ev("paywall_viewed"),
+        evWhere("paywall_viewed", "source", "create_game"),
         ev("game_created"),
       ],
       funnelsFilter: { funnelWindowInterval: 1, funnelWindowIntervalUnit: "day" },
