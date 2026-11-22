@@ -43,6 +43,19 @@ export type PurchaseErrorKind =
   | "payment_pending"
   | "unknown";
 
+// CreateGame's three steps, and why Next/Create was refused. The reason maps
+// from the toast the screen already shows — never the text the user typed.
+export type CreateGameStep = "details" | "questions" | "settings";
+
+export type CreateGameBlockReason =
+  | "missing_fields"
+  | "invalid_email"
+  | "invalid_partner_email"
+  | "empty_question"
+  | "multiple_choice_options"
+  | "no_questions"
+  | "save_failed";
+
 type NoProps = Record<string, never>;
 
 export type EventProps = {
@@ -71,6 +84,10 @@ export type EventProps = {
   premium_granted: { source: PaywallSource };
   premium_grant_failed: { source: PaywallSource };
   analytics_opted_out: NoProps;
+  create_game_step_viewed: { step: CreateGameStep };
+  create_game_step_blocked: { step: CreateGameStep; reason: CreateGameBlockReason };
+  // Left CreateGame without finishing; `step` is where they were.
+  create_game_abandoned: { step: CreateGameStep };
 };
 
 export type AnalyticsEventName = keyof EventProps;

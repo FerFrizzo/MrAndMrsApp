@@ -7,6 +7,8 @@ export type {
   AnalyticsEventName,
   AuthErrorKind,
   AuthMethod,
+  CreateGameBlockReason,
+  CreateGameStep,
   EventProps,
   GameRole,
   InviteFrom,
