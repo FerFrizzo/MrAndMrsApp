@@ -19,6 +19,8 @@ interface PaywallModalProps {
   source?: PaywallSource | string;
   onUpgradeSuccess: () => void;
   onContinueFree: () => void;
+  // Back/dismiss. Without it, dismissing continues free (GameDetails relies on that).
+  onClose?: () => void;
 }
 
 const PREMIUM_FEATURES = [
@@ -32,6 +34,7 @@ export const PaywallModal: React.FC<PaywallModalProps> = ({
   source = 'unknown',
   onUpgradeSuccess,
   onContinueFree,
+  onClose,
 }) => {
   const [price, setPrice] = useState('—');
   const [purchasing, setPurchasing] = useState(false);
@@ -68,7 +71,7 @@ export const PaywallModal: React.FC<PaywallModalProps> = ({
       transparent
       onRequestClose={() => {
         tracking.onDismissed();
-        onContinueFree();
+        (onClose ?? onContinueFree)();
       }}
     >
       <View style={styles.overlay}>
